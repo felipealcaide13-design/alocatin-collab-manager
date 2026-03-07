@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Colaboradores from "./pages/Colaboradores";
+import Areas from "./pages/Areas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/colaboradores" element={<Colaboradores />} />
+            <Route path="/areas" element={<Areas />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>

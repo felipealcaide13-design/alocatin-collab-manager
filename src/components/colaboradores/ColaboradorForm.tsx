@@ -28,12 +28,13 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   PILARES,
-  AREAS_POR_PILAR,
-  SUBAREAS_POR_AREA,
   SENIORIDADES,
   type Colaborador,
   type Pilar,
 } from "@/types/colaborador";
+import { type Area } from "@/types/area";
+import { areaService } from "@/services/areaService";
+import { useQuery } from "@tanstack/react-query";
 
 const schema = z.object({
   nomeCompleto: z.string().min(3, "Nome deve ter ao menos 3 caracteres"),
@@ -92,8 +93,21 @@ export function ColaboradorForm({
   const pilarValue = form.watch("pilar");
   const areaValue = form.watch("area");
 
-  const areas = pilarValue ? AREAS_POR_PILAR[pilarValue as Pilar] || [] : [];
-  const subareas = areaValue ? SUBAREAS_POR_AREA[areaValue] || [] : [];
+  const { data: fetchedAreas = [], isLoading: isLoadingAreas } = useQuery({
+    queryKey: ["areas-by-pilar", pilarValue],
+    queryFn: async () => {
+      if (!pilarValue) return [];
+      try {
+        return await areaService.getByPilar(pilarValue);
+      } catch (err) {
+        return [];
+      }
+    },
+    enabled: !!pilarValue,
+  });
+
+  const selectedAreaObj = fetchedAreas.find(a => a.nome === areaValue);
+  const subareas = selectedAreaObj?.subareas_possiveis || [];
 
   useEffect(() => {
     if (open) {
@@ -235,9 +249,13 @@ export function ColaboradorForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {areas.map((a) => (
-                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                      ))}
+                      {isLoadingAreas ? (
+                        <SelectItem value="carregando" disabled>Carregando...</SelectItem>
+                      ) : (
+                        fetchedAreas.map((a) => (
+                          <SelectItem key={a.id} value={a.nome}>{a.nome}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
