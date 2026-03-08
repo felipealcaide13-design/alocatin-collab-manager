@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Menu, X, Layers } from "lucide-react";
+import { LayoutDashboard, Users, Menu, X, Layers, FileText } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
+  { icon: FileText, label: "Contratos", to: "/contratos" },
   { icon: Users, label: "Colaboradores", to: "/colaboradores" },
   { icon: Layers, label: "Áreas", to: "/areas" },
 ];

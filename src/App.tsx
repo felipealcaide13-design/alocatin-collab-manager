@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Colaboradores from "./pages/Colaboradores";
 import Areas from "./pages/Areas";
+import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ const App = () => (
         <AppLayout>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/contratos" element={<Contratos />} />
             <Route path="/colaboradores" element={<Colaboradores />} />
             <Route path="/areas" element={<Areas />} />
             <Route path="*" element={<NotFound />} />

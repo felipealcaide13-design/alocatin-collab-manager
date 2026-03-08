@@ -58,6 +58,24 @@ const MOCK_AREAS = [
     { id: uuidv4(), nome: "Branding", pilar: "Marketing", subareas_possiveis: ["Social Media", "PR"], descricao: "Marca e Relações Públicas", lideres: [] as string[] },
 ];
 
+const MOCK_CONTRATOS = [
+    { id: uuidv4(), nome: "BancoX Core Banking", cliente: "BancoX", valor_total: 2500000.00, data_inicio: "2023-01-15", data_fim: null, status: "Ativo", descricao: "Modernização do core banking", torres: [] },
+    { id: uuidv4(), nome: "StartupY MVP", cliente: "StartupY", valor_total: 180000.00, data_inicio: "2023-05-10", data_fim: null, status: "Pausado", descricao: "Desenvolvimento de MVP", torres: [] },
+    { id: uuidv4(), nome: "VarejoZ App", cliente: "VarejoZ", valor_total: 500000.00, data_inicio: "2023-02-01", data_fim: "2023-08-30", status: "Encerrado", descricao: "App e-commerce B2C", torres: [] },
+    { id: uuidv4(), nome: "Tech Corp ERP", cliente: "Tech Corp", valor_total: 1200000.00, data_inicio: "2023-03-20", data_fim: null, status: "Ativo", descricao: "Implantação ERP", torres: [] },
+    { id: uuidv4(), nome: "Governo Digital", cliente: "Gov BR", valor_total: 3500000.00, data_inicio: "2023-01-05", data_fim: null, status: "Ativo", descricao: "Digitalização de serviços", torres: [] },
+    { id: uuidv4(), nome: "Saúde Mais App", cliente: "Saúde Mais", valor_total: 800000.00, data_inicio: "2023-04-12", data_fim: null, status: "Ativo", descricao: "Telemedicina", torres: [] },
+    { id: uuidv4(), nome: "Logística Express CMS", cliente: "CargoLtda", valor_total: 450000.00, data_inicio: "2023-06-01", data_fim: null, status: "Pausado", descricao: "Painel de fretes", torres: [] },
+    { id: uuidv4(), nome: "Banco Alfa Pix", cliente: "Banco Alfa", valor_total: 900000.00, data_inicio: "2022-11-15", data_fim: "2023-05-15", status: "Encerrado", descricao: "Integração Pix B2B", torres: [] },
+    { id: uuidv4(), nome: "EducaTech LMS", cliente: "EducaTech", valor_total: 600000.00, data_inicio: "2023-07-10", data_fim: null, status: "Ativo", descricao: "Plataforma EAD", torres: [] },
+    { id: uuidv4(), nome: "Agro IoT", cliente: "AgroLtda", valor_total: 1500000.00, data_inicio: "2023-08-01", data_fim: null, status: "Ativo", descricao: "Sensores e dados no campo", torres: [] },
+    { id: uuidv4(), nome: "Imobiliária Hub", cliente: "ImobSA", valor_total: 300000.00, data_inicio: "2023-01-20", data_fim: null, status: "Ativo", descricao: "Portal imobiliário", torres: [] },
+    { id: uuidv4(), nome: "Cripto Exchange", cliente: "CoinBR", valor_total: 2100000.00, data_inicio: "2023-05-01", data_fim: null, status: "Pausado", descricao: "Plataforma de trading", torres: [] },
+    { id: uuidv4(), nome: "StreamingX", cliente: "Midia Corp", valor_total: 3200000.00, data_inicio: "2022-10-01", data_fim: "2023-10-01", status: "Ativo", descricao: "Plataforma de streaming SVOD", torres: [] },
+    { id: uuidv4(), nome: "Seguradora Auto", cliente: "SafeSeg", valor_total: 750000.00, data_inicio: "2023-02-15", data_fim: "2023-09-15", status: "Encerrado", descricao: "App para sinistros", torres: [] },
+    { id: uuidv4(), nome: "Rede Social Niche", cliente: "Connect", valor_total: 400000.00, data_inicio: "2023-09-01", data_fim: null, status: "Ativo", descricao: "Rede para gamers", torres: [] },
+];
+
 async function seed() {
     console.log("Iniciando Seed de Dados...");
 
@@ -106,6 +124,15 @@ async function seed() {
         console.log("Relações inseridas com sucesso.");
 
         // Atualizar colaboradores existentes com lideres via mock (already done above)
+
+        console.log("Inserindo 15 contratos mock...");
+        const { error: errorContratos } = await supabase.from('contratos').upsert(MOCK_CONTRATOS);
+        if (errorContratos) {
+            console.warn("Erro ao inserir contratos. Detalhe:", errorContratos.message);
+        } else {
+            console.log("Contratos inseridos com sucesso.");
+        }
+
         console.log("Seed finalizado com sucesso!");
 
     } catch (err) {
