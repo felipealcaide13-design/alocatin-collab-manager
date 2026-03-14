@@ -1,0 +1,47 @@
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface DeleteConfirmDialogProps {
+    open: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    nome: string;
+    type: "torre" | "squad";
+    isLoading?: boolean;
+}
+
+export function DeleteConfirmDialog({ open, onClose, onConfirm, nome, type, isLoading }: DeleteConfirmDialogProps) {
+    const word = type === "torre" ? "a torre" : "o squad";
+
+    return (
+        <AlertDialog open={open} onOpenChange={(v) => !v && onClose()}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir {type === "torre" ? "Torre" : "Squad"}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tem certeza que deseja excluir {word} <strong>{nome}</strong>? Esta ação
+                        {type === "torre" && " excluirá também todos os squads atrelados e "} não pode ser desfeita.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={onClose} disabled={isLoading}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={(e) => { e.preventDefault(); onConfirm(); }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Excluindo..." : "Sim, Excluir"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}

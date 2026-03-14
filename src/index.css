@@ -6,25 +6,25 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    --background: 210 16% 97%;
+    --foreground: 222 49% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 49% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222 49% 10%;
 
     /* Primary: Corporate Blue #3B82F6 */
-    --primary: 217 91% 60%;
+    --primary: 194 98% 33%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 217 91% 95%;
+    --primary-muted: 199 45% 90%;
 
     /* Secondary: Corporate Green #10B981 */
-    --secondary: 160 84% 39%;
+    --secondary: 160 84% 38%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 16% 93%;
+    --muted: 197 46%;
     --muted-foreground: 215 16% 47%;
 
     --accent: 160 84% 39%;
