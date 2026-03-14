@@ -23,22 +23,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/lib/supabase";
-import { PILARES, type Pilar } from "@/types/colaborador";
 import { type Area } from "@/types/area";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
-    pilar: z.enum(["Engenharia", "Produto", "Financeiro", "RH", "Marketing"]),
     lideres: z.array(z.string()).default([]),
     descricao: z.string().optional(),
     subareas_possiveis: z.array(z.string()).default([]),
@@ -68,7 +59,6 @@ export function AreaForm({
         resolver: zodResolver(schema),
         defaultValues: {
             nome: "",
-            pilar: "Engenharia",
             lideres: [],
             descricao: "",
             subareas_possiveis: [],
@@ -78,13 +68,12 @@ export function AreaForm({
     const { data: colaboradores = [], isLoading: isColabsLoading } = useQuery({
         queryKey: ["colaboradores-lideres"],
         queryFn: async () => {
-            // Trying to fetch from Supabase as requested
-            const { data, error } = await supabase.from('colaboradores').select('id, nomeCompleto');
+            const { data, error } = await supabase.from('colaboradores').select('id, nome_completo');
             if (error) {
                 console.warn('Erro ao buscar líderes do Supabase:', error);
-                return []; // Fallback empty if not migrated
+                return [];
             }
-            return data || [];
+            return (data || []).map((c: any) => ({ id: c.id, nomeCompleto: c.nome_completo }));
         },
     });
 
@@ -93,7 +82,6 @@ export function AreaForm({
             if (initialData) {
                 form.reset({
                     nome: initialData.nome,
-                    pilar: initialData.pilar,
                     lideres: initialData.lideres,
                     descricao: initialData.descricao || "",
                     subareas_possiveis: initialData.subareas_possiveis,
@@ -101,7 +89,6 @@ export function AreaForm({
             } else {
                 form.reset({
                     nome: "",
-                    pilar: "Engenharia",
                     lideres: [],
                     descricao: "",
                     subareas_possiveis: [],
@@ -156,34 +143,8 @@ export function AreaForm({
                                     <FormItem className="sm:col-span-2">
                                         <FormLabel>Nome da Área *</FormLabel>
                                         <FormControl>
-                                            <Input {...field} placeholder="Ex: Backend Core" />
+                                            <Input {...field} placeholder="Ex: Engenharia" />
                                         </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Pilar */}
-                            <FormField
-                                control={form.control}
-                                name="pilar"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Pilar *</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {PILARES.map((p) => (
-                                                    <SelectItem key={p} value={p}>
-                                                        {p}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -245,7 +206,7 @@ export function AreaForm({
                                 )}
                             />
 
-                            {/* Líderes - Multi Select PULL */}
+                            {/* Líderes - Multi Select */}
                             <FormField
                                 control={form.control}
                                 name="lideres"

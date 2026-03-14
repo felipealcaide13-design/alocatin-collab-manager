@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Filter, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,36 +14,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ColaboradorForm } from "@/components/colaboradores/ColaboradorForm";
 import { DeleteConfirmDialog } from "@/components/colaboradores/DeleteConfirmDialog";
 import { colaboradorService } from "@/services/colaboradorService";
-import {
-  PILARES,
-  AREAS_POR_PILAR,
-  type Colaborador,
-  type Pilar,
-} from "@/types/colaborador";
+import { AREAS, type Colaborador } from "@/types/colaborador";
 import { useToast } from "@/hooks/use-toast";
 
-type SortField = "nomeCompleto" | "status" | "pilar" | "senioridade";
+type SortField = "nomeCompleto" | "status" | "area" | "senioridade";
 type SortDir = "asc" | "desc";
 
 export default function Colaboradores() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Filters
   const [search, setSearch] = useState("");
-  const [filterPilar, setFilterPilar] = useState<string>("all");
   const [filterArea, setFilterArea] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-
-  // Sorting
   const [sortField, setSortField] = useState<SortField>("nomeCompleto");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  // Pagination
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
-  // Modals
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Colaborador | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Colaborador | null>(null);
@@ -85,18 +73,13 @@ export default function Colaboradores() {
     onError: (e: Error) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
   });
 
-  const areas = filterPilar !== "all" ? AREAS_POR_PILAR[filterPilar as Pilar] || [] : [];
-
   const filtered = useMemo(() => {
     return colaboradores
       .filter((c) => {
-        const matchSearch = search
-          ? c.nomeCompleto.toLowerCase().includes(search.toLowerCase())
-          : true;
-        const matchPilar = filterPilar !== "all" ? c.pilar === filterPilar : true;
+        const matchSearch = search ? c.nomeCompleto.toLowerCase().includes(search.toLowerCase()) : true;
         const matchArea = filterArea !== "all" ? c.area === filterArea : true;
         const matchStatus = filterStatus !== "all" ? c.status === filterStatus : true;
-        return matchSearch && matchPilar && matchArea && matchStatus;
+        return matchSearch && matchArea && matchStatus;
       })
       .sort((a, b) => {
         const av = a[sortField] ?? "";
@@ -105,7 +88,7 @@ export default function Colaboradores() {
           ? String(av).localeCompare(String(bv))
           : String(bv).localeCompare(String(av));
       });
-  }, [colaboradores, search, filterPilar, filterArea, filterStatus, sortField, sortDir]);
+  }, [colaboradores, search, filterArea, filterStatus, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -145,9 +128,7 @@ export default function Colaboradores() {
             {isLoading ? "Carregando..." : `${filtered.length} colaborador(es) encontrado(s)`}
           </p>
         </div>
-        <Button
-          onClick={() => { setEditTarget(null); setFormOpen(true); }}
-        >
+        <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Colaborador
         </Button>
@@ -166,27 +147,13 @@ export default function Colaboradores() {
             />
           </div>
 
-          <Select value={filterPilar} onValueChange={(v) => { setFilterPilar(v); setFilterArea("all"); setPage(1); }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos os pilares" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os pilares</SelectItem>
-              {PILARES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={filterArea}
-            onValueChange={(v) => { setFilterArea(v); setPage(1); }}
-            disabled={filterPilar === "all"}
-          >
+          <Select value={filterArea} onValueChange={(v) => { setFilterArea(v); setPage(1); }}>
             <SelectTrigger>
               <SelectValue placeholder="Todas as áreas" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as áreas</SelectItem>
-              {areas.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              {AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -210,10 +177,7 @@ export default function Colaboradores() {
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  <button
-                    onClick={() => handleSort("nomeCompleto")}
-                    className="flex items-center hover:text-foreground transition-colors"
-                  >
+                  <button onClick={() => handleSort("nomeCompleto")} className="flex items-center hover:text-foreground transition-colors">
                     Nome <SortIcon field="nomeCompleto" />
                   </button>
                 </th>
@@ -221,35 +185,24 @@ export default function Colaboradores() {
                   E-mail
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                  <button
-                    onClick={() => handleSort("pilar")}
-                    className="flex items-center hover:text-foreground transition-colors"
-                  >
-                    Pilar <SortIcon field="pilar" />
+                  <button onClick={() => handleSort("area")} className="flex items-center hover:text-foreground transition-colors">
+                    Área <SortIcon field="area" />
                   </button>
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                  Área
+                  Subárea
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">
-                  <button
-                    onClick={() => handleSort("senioridade")}
-                    className="flex items-center hover:text-foreground transition-colors"
-                  >
+                  <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
                     Senioridade <SortIcon field="senioridade" />
                   </button>
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  <button
-                    onClick={() => handleSort("status")}
-                    className="flex items-center hover:text-foreground transition-colors"
-                  >
+                  <button onClick={() => handleSort("status")} className="flex items-center hover:text-foreground transition-colors">
                     Status <SortIcon field="status" />
                   </button>
                 </th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
-                  Ações
-                </th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -274,25 +227,17 @@ export default function Colaboradores() {
                     </tr>
                   )
                 : paginated.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="border-b last:border-0 hover:bg-muted/20 transition-colors"
-                    >
+                    <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div>
                           <p className="font-medium text-foreground">{c.nomeCompleto}</p>
-                          <p className="text-xs text-muted-foreground md:hidden">{c.pilar}</p>
+                          <p className="text-xs text-muted-foreground md:hidden">{c.area}</p>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.email}</td>
-                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{c.pilar}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{c.area}</td>
                       <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                        <div>
-                          <span>{c.area}</span>
-                          {c.subarea && (
-                            <span className="text-xs text-muted-foreground block">{c.subarea}</span>
-                          )}
-                        </div>
+                        {c.subarea || <span className="text-muted-foreground/50">—</span>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell">{c.senioridade}</td>
                       <td className="px-4 py-3">
@@ -333,20 +278,10 @@ export default function Colaboradores() {
               Página {page} de {totalPages} — {filtered.length} registros
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
                 Anterior
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                 Próxima
               </Button>
             </div>

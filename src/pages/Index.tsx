@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatCards } from "@/components/dashboard/StatCards";
 import { PilarChart, SenioridadeChart } from "@/components/dashboard/Charts";
 import { colaboradorService } from "@/services/colaboradorService";
@@ -66,8 +65,8 @@ export default function Dashboard() {
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Nome</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden md:table-cell">Pilar</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden lg:table-cell">Área</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden md:table-cell">Área</th>
+                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden lg:table-cell">Subárea</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden sm:table-cell">Senioridade</th>
                 <th className="text-left px-6 py-3 font-medium text-muted-foreground">Status</th>
               </tr>
@@ -86,8 +85,10 @@ export default function Dashboard() {
                 : top10.map((c) => (
                     <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-6 py-3 font-medium">{c.nomeCompleto}</td>
-                      <td className="px-6 py-3 text-muted-foreground hidden md:table-cell">{c.pilar}</td>
-                      <td className="px-6 py-3 text-muted-foreground hidden lg:table-cell">{c.area}</td>
+                      <td className="px-6 py-3 text-muted-foreground hidden md:table-cell">{c.area}</td>
+                      <td className="px-6 py-3 text-muted-foreground hidden lg:table-cell">
+                        {c.subarea || <span className="text-muted-foreground/50">—</span>}
+                      </td>
                       <td className="px-6 py-3 text-muted-foreground hidden sm:table-cell">{c.senioridade}</td>
                       <td className="px-6 py-3">
                         <span className={c.status === "Ativo" ? "badge-active" : "badge-inactive"}>

@@ -10,7 +10,7 @@ export function StatCards({ colaboradores }: StatCardsProps) {
   const total = colaboradores.length;
   const ativos = colaboradores.filter((c) => c.status === "Ativo").length;
   const desligados = colaboradores.filter((c) => c.status === "Desligado").length;
-  const pilares = new Set(colaboradores.map((c) => c.pilar)).size;
+  const areas = new Set(colaboradores.map((c) => c.area)).size;
 
   const cards = [
     {
@@ -35,8 +35,8 @@ export function StatCards({ colaboradores }: StatCardsProps) {
       bg: "bg-destructive/10",
     },
     {
-      title: "Pilares Ativos",
-      value: pilares,
+      title: "Áreas Ativas",
+      value: areas,
       icon: Building2,
       color: "text-amber-500",
       bg: "bg-amber-50",
