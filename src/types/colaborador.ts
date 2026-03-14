@@ -12,7 +12,11 @@ export type Senioridade =
 
 export type Status = "Ativo" | "Desligado";
 
-export type Pilar = "Engenharia" | "Produto" | "Financeiro" | "RH" | "Marketing";
+// Area = o que antes era "Pilar". São o mesmo conceito no sistema.
+export type Area = "Engenharia" | "Produto" | "Financeiro" | "RH" | "Marketing";
+
+/** @deprecated use Area instead */
+export type Pilar = Area;
 
 export interface Colaborador {
   id: string;
@@ -20,8 +24,7 @@ export interface Colaborador {
   email: string;
   documento: string;
   cargo: string;
-  pilar: Pilar;
-  area: string;
+  area: Area;
   subarea: string | null;
   senioridade: Senioridade;
   status: Status;
@@ -34,15 +37,10 @@ export const SENIORIDADES: Senioridade[] = [
   "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
-export const PILARES: Pilar[] = ["Engenharia", "Produto", "Financeiro", "RH", "Marketing"];
+export const AREAS: Area[] = ["Engenharia", "Produto", "Financeiro", "RH", "Marketing"];
 
-export const AREAS_POR_PILAR: Record<Pilar, string[]> = {
-  Engenharia: ["Backend", "Frontend", "DevOps"],
-  Produto: ["Produto", "Product Design", "PX", "Projeto"],
-  Financeiro: ["Financeiro", "Financeiro Ops"],
-  RH: ["Talent", "Business Partner"],
-  Marketing: ["Growth", "PMM"],
-};
+/** @deprecated use AREAS instead */
+export const PILARES: Area[] = AREAS;
 
 export const SUBAREAS_POR_AREA: Record<string, string[]> = {
   PX: ["QA", "Tech Writer"],

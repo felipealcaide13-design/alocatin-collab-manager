@@ -18,29 +18,21 @@ import { AreaForm } from "@/components/areas/AreaForm";
 import { DeleteConfirmDialog } from "@/components/areas/DeleteConfirmDialog";
 import { areaService } from "@/services/areaService";
 import { supabase } from "@/lib/supabase";
-import { PILARES, type Pilar } from "@/types/colaborador";
 import { type Area } from "@/types/area";
 
-type SortField = "nome" | "pilar";
+type SortField = "nome";
 type SortDir = "asc" | "desc";
 
 export default function Areas() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    // Filters
     const [search, setSearch] = useState("");
-    const [filterPilar, setFilterPilar] = useState<string>("all");
-
-    // Sorting
     const [sortField, setSortField] = useState<SortField>("nome");
     const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-    // Pagination (Server side or client side, I will implement client side over fetching all to mirror Colaboradores)
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 10;
 
-    // Modals
     const [formOpen, setFormOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Area | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
@@ -49,10 +41,9 @@ export default function Areas() {
         queryKey: ["areas"],
         queryFn: async () => {
             try {
-                const res = await areaService.getAll();
-                return res;
+                return await areaService.getAll();
             } catch (err) {
-                console.warn("Failed to fetch areas from Supabase, maybe not seeded?", err);
+                console.warn("Failed to fetch areas:", err);
                 return [];
             }
         },
@@ -61,9 +52,9 @@ export default function Areas() {
     const { data: colaboradores = [] } = useQuery({
         queryKey: ["colaboradores-lideres"],
         queryFn: async () => {
-            const { data, error } = await supabase.from('colaboradores').select('id, nomeCompleto');
+            const { data, error } = await supabase.from('colaboradores').select('id, nome_completo');
             if (error) return [];
-            return data || [];
+            return (data || []).map((c: any) => ({ id: c.id, nomeCompleto: c.nome_completo }));
         },
     });
 
@@ -108,13 +99,7 @@ export default function Areas() {
 
     const filtered = useMemo(() => {
         return areas
-            .filter((a) => {
-                const matchSearch = search
-                    ? a.nome.toLowerCase().includes(search.toLowerCase())
-                    : true;
-                const matchPilar = filterPilar !== "all" ? a.pilar === filterPilar : true;
-                return matchSearch && matchPilar;
-            })
+            .filter((a) => !search || a.nome.toLowerCase().includes(search.toLowerCase()))
             .sort((a, b) => {
                 const av = a[sortField] ?? "";
                 const bv = b[sortField] ?? "";
@@ -122,7 +107,7 @@ export default function Areas() {
                     ? String(av).localeCompare(String(bv))
                     : String(bv).localeCompare(String(av));
             });
-    }, [areas, search, filterPilar, sortField, sortDir]);
+    }, [areas, search, sortField, sortDir]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -162,9 +147,7 @@ export default function Areas() {
                         {isLoading ? "Carregando..." : `${filtered.length} área(s) encontrada(s)`}
                     </p>
                 </div>
-                <Button
-                    onClick={() => { setEditTarget(null); setFormOpen(true); }}
-                >
+                <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Área
                 </Button>
@@ -172,26 +155,14 @@ export default function Areas() {
 
             {/* Filters */}
             <div className="bg-card rounded-xl border shadow-sm p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por nome..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            className="pl-9"
-                        />
-                    </div>
-
-                    <Select value={filterPilar} onValueChange={(v) => { setFilterPilar(v); setPage(1); }}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Todos os pilares" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os pilares</SelectItem>
-                            {PILARES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                <div className="relative max-w-sm">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar por nome..."
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        className="pl-9"
+                    />
                 </div>
             </div>
 
@@ -207,14 +178,6 @@ export default function Areas() {
                                         className="flex items-center hover:text-foreground transition-colors"
                                     >
                                         Nome <SortIcon field="nome" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
-                                    <button
-                                        onClick={() => handleSort("pilar")}
-                                        className="flex items-center hover:text-foreground transition-colors"
-                                    >
-                                        Pilar <SortIcon field="pilar" />
                                     </button>
                                 </th>
                                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
@@ -233,7 +196,6 @@ export default function Areas() {
                                 ? [...Array(5)].map((_, i) => (
                                     <tr key={i} className="border-b">
                                         <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                        <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-20" /></td>
                                         <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-40" /></td>
                                         <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
                                         <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
@@ -242,8 +204,8 @@ export default function Areas() {
                                 : paginated.length === 0
                                     ? (
                                         <tr>
-                                            <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                                                Nenhuma área encontrada com os filtros aplicados. Tente cadastrar uma ou rodar o Seed.
+                                            <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                                                Nenhuma área encontrada. Clique em "Nova Área" para cadastrar.
                                             </td>
                                         </tr>
                                     )
@@ -254,9 +216,10 @@ export default function Areas() {
                                         >
                                             <td className="px-4 py-3">
                                                 <div className="font-medium text-foreground">{a.nome}</div>
-                                                <div className="text-xs text-muted-foreground md:hidden">{a.pilar}</div>
+                                                {a.descricao && (
+                                                    <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{a.descricao}</div>
+                                                )}
                                             </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{a.pilar}</td>
                                             <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell min-w-[200px] max-w-[300px] truncate">
                                                 {getLideresNames(a.lideres)}
                                             </td>

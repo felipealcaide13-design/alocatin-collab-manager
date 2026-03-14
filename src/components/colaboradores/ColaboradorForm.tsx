@@ -1,4 +1,4 @@
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect } from "react";
@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  PILARES,
+  AREAS,
   SENIORIDADES,
   type Colaborador,
-  type Pilar,
+  type Area,
 } from "@/types/colaborador";
-import { type Area } from "@/types/area";
+import { type Area as AreaEntity } from "@/types/area";
 import { areaService } from "@/services/areaService";
 import { useQuery } from "@tanstack/react-query";
 
@@ -41,7 +41,6 @@ const schema = z.object({
   email: z.string().email("E-mail inválido"),
   documento: z.string().min(11, "CPF inválido").max(18),
   cargo: z.string().min(2, "Informe o cargo"),
-  pilar: z.enum(["Engenharia", "Produto", "Financeiro", "RH", "Marketing"]),
   area: z.string().min(1, "Selecione uma área"),
   subarea: z.string().nullable().optional(),
   senioridade: z.enum([
@@ -80,7 +79,6 @@ export function ColaboradorForm({
       email: "",
       documento: "",
       cargo: "",
-      pilar: "Engenharia",
       area: "",
       subarea: null,
       senioridade: "Analista pleno",
@@ -90,23 +88,21 @@ export function ColaboradorForm({
     },
   });
 
-  const pilarValue = form.watch("pilar");
   const areaValue = form.watch("area");
 
-  const { data: fetchedAreas = [], isLoading: isLoadingAreas } = useQuery({
-    queryKey: ["areas-by-pilar", pilarValue],
+  // Busca subáreas da área selecionada a partir do banco de áreas cadastradas
+  const { data: fetchedAreas = [] } = useQuery({
+    queryKey: ["areas-all"],
     queryFn: async () => {
-      if (!pilarValue) return [];
       try {
-        return await areaService.getByPilar(pilarValue);
-      } catch (err) {
+        return await areaService.getAll();
+      } catch {
         return [];
       }
     },
-    enabled: !!pilarValue,
   });
 
-  const selectedAreaObj = fetchedAreas.find(a => a.nome === areaValue);
+  const selectedAreaObj = fetchedAreas.find((a: AreaEntity) => a.nome === areaValue);
   const subareas = selectedAreaObj?.subareas_possiveis || [];
 
   useEffect(() => {
@@ -117,7 +113,6 @@ export function ColaboradorForm({
           email: initialData.email,
           documento: initialData.documento,
           cargo: initialData.cargo,
-          pilar: initialData.pilar,
           area: initialData.area,
           subarea: initialData.subarea,
           senioridade: initialData.senioridade,
@@ -131,7 +126,6 @@ export function ColaboradorForm({
           email: "",
           documento: "",
           cargo: "",
-          pilar: "Engenharia",
           area: "",
           subarea: null,
           senioridade: "Analista pleno",
@@ -142,14 +136,6 @@ export function ColaboradorForm({
       }
     }
   }, [open, initialData]);
-
-  // Reset area when pilar changes
-  useEffect(() => {
-    if (!initialData || form.getValues("pilar") !== initialData.pilar) {
-      form.setValue("area", "");
-      form.setValue("subarea", null);
-    }
-  }, [pilarValue]);
 
   // Reset subarea when area changes
   useEffect(() => {
@@ -218,44 +204,25 @@ export function ColaboradorForm({
                 </FormItem>
               )} />
 
-              {/* Pilar */}
-              <FormField control={form.control} name="pilar" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pilar *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isDesligado}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PILARES.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
               {/* Área */}
               <FormField control={form.control} name="area" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Área *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isDesligado || !pilarValue}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isDesligado}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o pilar primeiro" />
+                        <SelectValue placeholder="Selecione uma área" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {isLoadingAreas ? (
-                        <SelectItem value="carregando" disabled>Carregando...</SelectItem>
-                      ) : (
-                        fetchedAreas.map((a) => (
-                          <SelectItem key={a.id} value={a.nome}>{a.nome}</SelectItem>
-                        ))
-                      )}
+                      {fetchedAreas.length > 0
+                        ? fetchedAreas.map((a: AreaEntity) => (
+                            <SelectItem key={a.id} value={a.nome}>{a.nome}</SelectItem>
+                          ))
+                        : AREAS.map((a) => (
+                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                          ))
+                      }
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -11,7 +11,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import type { Colaborador, Pilar } from "@/types/colaborador";
+import type { Colaborador } from "@/types/colaborador";
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444"];
 
@@ -20,16 +20,16 @@ interface ChartsProps {
 }
 
 export function PilarChart({ colaboradores }: ChartsProps) {
-  const pilarCount = colaboradores.reduce<Record<string, number>>((acc, c) => {
-    acc[c.pilar] = (acc[c.pilar] || 0) + 1;
+  const areaCount = colaboradores.reduce<Record<string, number>>((acc, c) => {
+    acc[c.area] = (acc[c.area] || 0) + 1;
     return acc;
   }, {});
 
-  const data = Object.entries(pilarCount).map(([name, value]) => ({ name, value }));
+  const data = Object.entries(areaCount).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="bg-card rounded-xl border shadow-sm p-6">
-      <h3 className="text-base font-semibold text-foreground mb-4">Distribuição por Pilar</h3>
+      <h3 className="text-base font-semibold text-foreground mb-4">Distribuição por Área</h3>
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie
