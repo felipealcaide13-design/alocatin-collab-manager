@@ -1,9 +1,8 @@
-import { Pilar, Colaborador } from "./colaborador";
+import { Colaborador } from "./colaborador";
 
 export interface Area {
     id: string;
     nome: string;
-    pilar: Pilar;
     subareas_possiveis: string[];
     lideres: string[]; // UUIDs of leaders
     descricao: string;
