@@ -2,93 +2,84 @@ import { v4 as uuidv4 } from "uuid";
 import type { Colaborador, ColaboradorInput } from "@/types/colaborador";
 import { supabase } from "@/lib/supabase";
 
+// Map DB snake_case → frontend camelCase
+function fromDb(row: any): Colaborador {
+  return {
+    id: row.id,
+    nomeCompleto: row.nome_completo,
+    email: row.email,
+    documento: row.documento,
+    cargo: row.cargo,
+    area: row.area,
+    subarea: row.subarea ?? null,
+    senioridade: row.senioridade,
+    status: row.status,
+    dataAdmissao: row.data_admissao,
+    time: row.time ?? null,
+  };
+}
+
+// Map frontend camelCase → DB snake_case
+function toDb(input: Partial<ColaboradorInput>): Record<string, any> {
+  const mapped: Record<string, any> = {};
+  if (input.nomeCompleto !== undefined) mapped.nome_completo = input.nomeCompleto;
+  if (input.email !== undefined) mapped.email = input.email;
+  if (input.documento !== undefined) mapped.documento = input.documento;
+  if (input.cargo !== undefined) mapped.cargo = input.cargo;
+  if (input.area !== undefined) mapped.area = input.area;
+  if (input.subarea !== undefined) mapped.subarea = input.subarea;
+  if (input.senioridade !== undefined) mapped.senioridade = input.senioridade;
+  if (input.status !== undefined) mapped.status = input.status;
+  if (input.dataAdmissao !== undefined) mapped.data_admissao = input.dataAdmissao;
+  if (input.time !== undefined) mapped.time = input.time;
+  return mapped;
+}
+
 export const colaboradorService = {
   async getAll(): Promise<Colaborador[]> {
     const { data, error } = await supabase
       .from("colaboradores")
-      .select(`
-        *,
-        colaborador_areas (
-          areas (
-            nome,
-            subareas_possiveis
-          )
-        )
-      `)
-      .order("nomeCompleto");
+      .select("*")
+      .order("nome_completo");
 
     if (error) {
-      console.warn("Using mock data as fallback, maybe not seeded?", error);
-      return []; // fallback if they haven't run seed
+      console.warn("Error fetching colaboradores:", error);
+      return [];
     }
 
-    // Map JOIN to flattened properties
-    const mappedData: Colaborador[] = data.map((c: any) => {
-      const colAreas = c.colaborador_areas || [];
-      const areasJoined = colAreas.map((ca: any) => ca.areas?.nome).filter(Boolean);
-      return {
-        ...c,
-        area: areasJoined.length > 0 ? areasJoined.join(", ") : c.area, // Default to string column or JOIN output
-      };
-    });
-
-    return mappedData;
+    return (data || []).map(fromDb);
   },
 
   async getById(id: string): Promise<Colaborador | null> {
     const { data, error } = await supabase.from("colaboradores").select("*").eq("id", id).single();
     if (error) return null;
-    return data;
+    return fromDb(data);
   },
 
   async create(input: ColaboradorInput): Promise<Colaborador> {
-    const newId = uuidv4();
-    const novo = { ...input, id: newId };
-
     // Check conflicts
     const { data: extDocs } = await supabase.from("colaboradores").select("id").eq("documento", input.documento);
-    if (extDocs && extDocs.length > 0) throw new Error("CPF já cadastrado. (409)");
+    if (extDocs && extDocs.length > 0) throw new Error("CPF já cadastrado.");
 
     const { data: extEmails } = await supabase.from("colaboradores").select("id").eq("email", input.email);
-    if (extEmails && extEmails.length > 0) throw new Error("E-mail já cadastrado. (409)");
+    if (extEmails && extEmails.length > 0) throw new Error("E-mail já cadastrado.");
 
-    const { data, error } = await supabase.from("colaboradores").insert(novo).select().single();
+    const dbData = { id: uuidv4(), ...toDb(input) };
+    const { data, error } = await supabase.from("colaboradores").insert(dbData).select().single();
     if (error) throw new Error(error.message);
 
-    // Integre com schema Colaboradores existente - Ao salvar colaborador: INSERT colaborador_areas relation
-    if (input.area) {
-      // Look up the area ID based on the area name
-      const { data: areaData } = await supabase.from("areas").select("id").eq("nome", input.area).single();
-      if (areaData) {
-        await supabase.from("colaborador_areas").insert({
-          colaborador_id: data.id,
-          area_id: areaData.id,
-        });
-      }
-    }
-
-    return data;
+    return fromDb(data);
   },
 
   async update(id: string, input: Partial<ColaboradorInput>): Promise<Colaborador> {
-    const { data, error } = await supabase.from("colaboradores").update(input).eq("id", id).select().single();
+    const { data, error } = await supabase
+      .from("colaboradores")
+      .update(toDb(input))
+      .eq("id", id)
+      .select()
+      .single();
     if (error) throw new Error(error.message);
-
-    // Integre com schema Colaboradores existente 
-    if (input.area) {
-      // Look up the area ID
-      const { data: areaData } = await supabase.from("areas").select("id").eq("nome", input.area).single();
-      if (areaData) {
-        // Clear existing and replace
-        await supabase.from("colaborador_areas").delete().eq("colaborador_id", id);
-        await supabase.from("colaborador_areas").insert({
-          colaborador_id: id,
-          area_id: areaData.id,
-        });
-      }
-    }
-
-    return data;
+    return fromDb(data);
   },
 
   async remove(id: string): Promise<void> {
