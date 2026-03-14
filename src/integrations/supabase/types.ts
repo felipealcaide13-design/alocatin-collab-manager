@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      areas: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          lideres: string[] | null
+          nome: string
+          subareas_possiveis: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          lideres?: string[] | null
+          nome: string
+          subareas_possiveis?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          lideres?: string[] | null
+          nome?: string
+          subareas_possiveis?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      colaborador_areas: {
+        Row: {
+          area_id: string
+          colaborador_id: string
+        }
+        Insert: {
+          area_id: string
+          colaborador_id: string
+        }
+        Update: {
+          area_id?: string
+          colaborador_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "colaborador_areas_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "colaborador_areas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       colaboradores: {
         Row: {
           area: string
@@ -24,7 +84,6 @@ export type Database = {
           email: string
           id: string
           nome_completo: string
-          pilar: Database["public"]["Enums"]["pilar_enum"]
           senioridade: Database["public"]["Enums"]["senioridade_enum"]
           status: Database["public"]["Enums"]["status_enum"]
           subarea: string | null
@@ -40,7 +99,6 @@ export type Database = {
           email: string
           id?: string
           nome_completo: string
-          pilar: Database["public"]["Enums"]["pilar_enum"]
           senioridade: Database["public"]["Enums"]["senioridade_enum"]
           status?: Database["public"]["Enums"]["status_enum"]
           subarea?: string | null
@@ -56,12 +114,53 @@ export type Database = {
           email?: string
           id?: string
           nome_completo?: string
-          pilar?: Database["public"]["Enums"]["pilar_enum"]
           senioridade?: Database["public"]["Enums"]["senioridade_enum"]
           status?: Database["public"]["Enums"]["status_enum"]
           subarea?: string | null
           time?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      contratos: {
+        Row: {
+          cliente: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          id: string
+          nome: string
+          status: string
+          torres: string[] | null
+          updated_at: string
+          valor_total: number | null
+        }
+        Insert: {
+          cliente: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          status?: string
+          torres?: string[] | null
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Update: {
+          cliente?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          status?: string
+          torres?: string[] | null
+          updated_at?: string
+          valor_total?: number | null
         }
         Relationships: []
       }
