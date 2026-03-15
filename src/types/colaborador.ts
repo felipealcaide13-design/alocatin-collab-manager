@@ -12,24 +12,18 @@ export type Senioridade =
 
 export type Status = "Ativo" | "Desligado";
 
-// Area = o que antes era "Pilar". São o mesmo conceito no sistema.
-export type Area = "Engenharia" | "Produto" | "Financeiro" | "RH" | "Marketing";
-
-/** @deprecated use Area instead */
-export type Pilar = Area;
-
 export interface Colaborador {
   id: string;
   nomeCompleto: string;
-  email: string;
-  documento: string;
-  cargo: string;
-  area: Area;
-  subarea: string | null;
+  email?: string | null;
+  documento?: string | null;
+  diretoria_id?: string | null;   // FK → diretorias.id
+  area_ids: string[];             // FK[] → areas.id (1..N dependendo da senioridade)
+  especialidade_id?: string | null; // FK → especialidades.id (apenas ICs)
+  squad_ids: string[];            // FK[] → squads.id (opcional, exceto C-level/Diretor)
   senioridade: Senioridade;
   status: Status;
   dataAdmissao: string;
-  time: string | null;
 }
 
 export const SENIORIDADES: Senioridade[] = [
@@ -37,14 +31,11 @@ export const SENIORIDADES: Senioridade[] = [
   "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
-export const AREAS: Area[] = ["Engenharia", "Produto", "Financeiro", "RH", "Marketing"];
-
-/** @deprecated use AREAS instead */
-export const PILARES: Area[] = AREAS;
-
-export const SUBAREAS_POR_AREA: Record<string, string[]> = {
-  PX: ["QA", "Tech Writer"],
-  "Product Design": ["Product Design", "Design System"],
+// Grupos de senioridade para controle de UX
+export const SENIORIDADE_GRUPOS = {
+  clevel_diretor: ["C-level", "Diretor(a)"] as Senioridade[],
+  gestor: ["Head", "Gerente", "Coordenador(a)"] as Senioridade[],
+  ic: ["Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior"] as Senioridade[],
 };
 
 export type ColaboradorInput = Omit<Colaborador, "id">;

@@ -1,309 +1,643 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+    Plus, Search, Edit2, Trash2, ChevronDown, ChevronRight, BookOpen, BarChart2,
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrgChartView } from "@/components/areas/OrgChartView";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageLayout, FilterBar } from "@/components/ui/page-layout";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
-import { AreaForm } from "@/components/areas/AreaForm";
-import { DeleteConfirmDialog } from "@/components/areas/DeleteConfirmDialog";
+import { AreaForm, type AreaFormValues } from "@/components/areas/AreaForm";
+import { DeleteConfirmDialog as AreaDeleteDialog } from "@/components/areas/DeleteConfirmDialog";
+import { DeleteConfirmDialog as EspecialidadeDeleteDialog } from "@/components/especialidades/DeleteConfirmDialog";
+import { DeleteConfirmDialog as DiretoriaDeleteDialog } from "@/components/diretorias/DeleteConfirmDialog";
+import { EspecialidadeForm } from "@/components/especialidades/EspecialidadeForm";
+import { DiretoriaForm } from "@/components/diretorias/DiretoriaForm";
+import { DiretoriaDetailPanel } from "@/components/diretorias/DiretoriaDetailPanel";
 import { areaService } from "@/services/areaService";
+import { diretoriaService } from "@/services/diretoriaService";
+import { especialidadeService } from "@/services/especialidadeService";
+import { torreService } from "@/services/torreService";
 import { supabase } from "@/lib/supabase";
 import { type Area } from "@/types/area";
-
-type SortField = "nome";
-type SortDir = "asc" | "desc";
+import { type Diretoria, type DiretoriaInput } from "@/types/diretoria";
+import { type Especialidade } from "@/types/especialidade";
+import { type Squad } from "@/types/torre";
 
 export default function Areas() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
     const [search, setSearch] = useState("");
-    const [sortField, setSortField] = useState<SortField>("nome");
-    const [sortDir, setSortDir] = useState<SortDir>("asc");
-    const [page, setPage] = useState(1);
-    const PAGE_SIZE = 10;
+    const [expandedDiretorias, setExpandedDiretorias] = useState<Set<string>>(new Set());
 
-    const [formOpen, setFormOpen] = useState(false);
-    const [editTarget, setEditTarget] = useState<Area | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
+    // Area form state
+    const [areaFormOpen, setAreaFormOpen] = useState(false);
+    const [areaEditTarget, setAreaEditTarget] = useState<Area | null>(null);
+    const [areaDeleteTarget, setAreaDeleteTarget] = useState<Area | null>(null);
+    // Pre-fill diretoria when adding area from within a diretoria row
+    const [areaFormDiretoriaId, setAreaFormDiretoriaId] = useState<string | undefined>();
 
-    const { data: areas = [], isLoading } = useQuery({
+    // Diretoria form state
+    const [dirFormOpen, setDirFormOpen] = useState(false);
+    const [dirEditTarget, setDirEditTarget] = useState<Diretoria | null>(null);
+    const [dirDeleteTarget, setDirDeleteTarget] = useState<Diretoria | null>(null);
+
+    // Especialidade state
+    const [espDialogArea, setEspDialogArea] = useState<Area | null>(null);
+    const [espFormOpen, setEspFormOpen] = useState(false);
+    const [espDeleteTarget, setEspDeleteTarget] = useState<Especialidade | null>(null);
+
+    // Diretoria detail panel
+    const [detailDiretoria, setDetailDiretoria] = useState<Diretoria | null>(null);
+
+    // ── Queries ──────────────────────────────────────────────
+    const { data: diretorias = [], isLoading: loadingDir } = useQuery({
+        queryKey: ["diretorias"],
+        queryFn: () => diretoriaService.getAll().catch(() => []),
+    });
+
+    const { data: areas = [], isLoading: loadingAreas } = useQuery({
         queryKey: ["areas"],
-        queryFn: async () => {
-            try {
-                return await areaService.getAll();
-            } catch (err) {
-                console.warn("Failed to fetch areas:", err);
-                return [];
-            }
-        },
+        queryFn: () => areaService.getAll().catch(() => []),
+    });
+
+    const { data: especialidades = [] } = useQuery({
+        queryKey: ["especialidades"],
+        queryFn: () => especialidadeService.getAll().catch(() => []),
     });
 
     const { data: colaboradores = [] } = useQuery({
         queryKey: ["colaboradores-lideres"],
         queryFn: async () => {
-            const { data, error } = await supabase.from('colaboradores').select('id, nome_completo');
+            const { data, error } = await supabase.from("colaboradores").select("id, nome_completo");
             if (error) return [];
             return (data || []).map((c: any) => ({ id: c.id, nomeCompleto: c.nome_completo }));
         },
     });
 
-    const getLideresNames = (lideresIds: string[]) => {
-        if (!lideresIds || lideresIds.length === 0) return "-";
-        return lideresIds
-            .map((id) => colaboradores.find((c) => c.id === id)?.nomeCompleto || "?")
-            .join(", ");
-    };
+    const { data: allColaboradores = [] } = useQuery({
+        queryKey: ["colaboradores"],
+        queryFn: async () => {
+            const { data, error } = await supabase.from("colaboradores").select("*");
+            if (error) return [];
+            return (data || []).map((c: any) => ({
+                id: c.id,
+                nomeCompleto: c.nome_completo,
+                email: c.email ?? null,
+                documento: c.documento ?? null,
+                diretoria_id: c.diretoria_id ?? null,
+                area_ids: c.area_ids ?? [],
+                especialidade_id: c.especialidade_id ?? null,
+                squad_ids: c.squad_ids ?? [],
+                senioridade: c.senioridade,
+                status: c.status,
+                dataAdmissao: c.data_admissao,
+            }));
+        },
+    });
 
-    const createMutation = useMutation({
+    const { data: torres = [] } = useQuery({
+        queryKey: ["torres"],
+        queryFn: () => torreService.getAllTorres().catch(() => []),
+    });
+
+    const { data: squads = [] } = useQuery({
+        queryKey: ["squads"],
+        queryFn: () => torreService.getAllSquads().catch(() => []),
+    });
+
+    const isLoading = loadingDir || loadingAreas;
+    const getAreasByDiretoria = (diretoriaId: string) =>
+        areas.filter((a) => a.diretoria_id === diretoriaId);
+
+    const getEspecialidadesByArea = (areaId: string) =>
+        especialidades.filter((e) => e.area_id === areaId);
+
+    const getLideresNames = (ids: string[]) =>
+        ids.length === 0
+            ? "—"
+            : ids.map((id) => colaboradores.find((c) => c.id === id)?.nomeCompleto ?? "?").join(", ");
+
+    const toggleDiretoria = (id: string) =>
+        setExpandedDiretorias((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+
+    // ── Filtered diretorias ───────────────────────────────────
+    const filteredDiretorias = useMemo(() => {
+        if (!search) return diretorias;
+        const q = search.toLowerCase();
+        return diretorias.filter((d) => {
+            if (d.nome.toLowerCase().includes(q)) return true;
+            return getAreasByDiretoria(d.id).some((a) => a.nome.toLowerCase().includes(q));
+        });
+    }, [diretorias, areas, search]);
+
+    // Unassigned areas (no diretoria_id)
+    const unassignedAreas = useMemo(
+        () => areas.filter((a) => !a.diretoria_id),
+        [areas]
+    );
+
+    // ── Mutations — Diretoria ─────────────────────────────────
+    const createDirMutation = useMutation({
+        mutationFn: (data: DiretoriaInput) => diretoriaService.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["diretorias"] });
+            setDirFormOpen(false);
+            toast({ title: "Diretoria cadastrada!" });
+        },
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    });
+
+    const updateDirMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<DiretoriaInput> }) =>
+            diretoriaService.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["diretorias"] });
+            setDirFormOpen(false);
+            setDirEditTarget(null);
+            toast({ title: "Diretoria atualizada!" });
+        },
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    });
+
+    const deleteDirMutation = useMutation({
+        mutationFn: (id: string) => diretoriaService.remove(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["diretorias"] });
+            setDirDeleteTarget(null);
+            toast({ title: "Diretoria excluída" });
+        },
+        onError: (e: Error) => {
+            setDirDeleteTarget(null);
+            toast({ title: "Erro", description: e.message, variant: "destructive" });
+        },
+    });
+
+    // ── Mutations — Area ──────────────────────────────────────
+    const createAreaMutation = useMutation({
         mutationFn: (data: Omit<Area, "id" | "created_at">) => areaService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["areas"] });
-            setFormOpen(false);
-            toast({ title: "Área cadastrada!", description: "Nova área adicionada com sucesso." });
         },
-        onError: (e: Error) => toast({ title: "Erro ao cadastrar", description: e.message, variant: "destructive" }),
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
     });
 
-    const updateMutation = useMutation({
+    const updateAreaMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Area, "id" | "created_at">> }) =>
             areaService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["areas"] });
-            setFormOpen(false);
-            setEditTarget(null);
-            toast({ title: "Área atualizada!", description: "Dados salvos com sucesso." });
         },
-        onError: (e: Error) => toast({ title: "Erro ao atualizar", description: e.message, variant: "destructive" }),
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
     });
-
-    const deleteMutation = useMutation({
+    const deleteAreaMutation = useMutation({
         mutationFn: (id: string) => areaService.remove(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["areas"] });
-            setDeleteTarget(null);
-            toast({ title: "Área excluída", description: "O registro foi removido." });
+            setAreaDeleteTarget(null);
+            toast({ title: "Área excluída" });
         },
-        onError: (e: Error) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
     });
 
-    const filtered = useMemo(() => {
-        return areas
-            .filter((a) => !search || a.nome.toLowerCase().includes(search.toLowerCase()))
-            .sort((a, b) => {
-                const av = a[sortField] ?? "";
-                const bv = b[sortField] ?? "";
-                return sortDir === "asc"
-                    ? String(av).localeCompare(String(bv))
-                    : String(bv).localeCompare(String(av));
-            });
-    }, [areas, search, sortField, sortDir]);
+    // ── Mutations — Especialidade ─────────────────────────────
+    const createEspMutation = useMutation({
+        mutationFn: (data: { nome: string; area_id: string; descricao?: string }) =>
+            especialidadeService.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["especialidades"] });
+            setEspFormOpen(false);
+            toast({ title: "Especialidade cadastrada!" });
+        },
+        onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    });
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const deleteEspMutation = useMutation({
+        mutationFn: (id: string) => especialidadeService.remove(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["especialidades"] });
+            setEspDeleteTarget(null);
+            toast({ title: "Especialidade excluída" });
+        },
+        onError: (e: Error) => {
+            setEspDeleteTarget(null);
+            toast({ title: "Erro", description: e.message, variant: "destructive" });
+        },
+    });
 
-    const handleSort = (field: SortField) => {
-        if (field === sortField) {
-            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    // ── Handlers ──────────────────────────────────────────────
+    const handleDirFormSubmit = async (values: DiretoriaInput) => {
+        if (dirEditTarget) {
+            await updateDirMutation.mutateAsync({ id: dirEditTarget.id, data: values });
         } else {
-            setSortField(field);
-            setSortDir("asc");
+            await createDirMutation.mutateAsync(values);
         }
-        setPage(1);
     };
 
-    const SortIcon = ({ field }: { field: SortField }) => {
-        if (sortField !== field) return <ChevronsUpDown className="ml-1 h-3 w-3 opacity-40" />;
-        return sortDir === "asc"
-            ? <ChevronUp className="ml-1 h-3 w-3" />
-            : <ChevronDown className="ml-1 h-3 w-3" />;
+    const handleAreaFormSubmit = async (values: AreaFormValues) => {
+        const { especialidades: espNomes, ...rest } = values;
+        // subareas_possiveis mantido no banco por compatibilidade, mas não usado na UI
+        const areaData = { ...rest, subareas_possiveis: [] as string[] } as Omit<Area, "id" | "created_at">;
+
+        let areaId: string;
+        const isEditing = !!areaEditTarget;
+        if (isEditing) {
+            await updateAreaMutation.mutateAsync({ id: areaEditTarget!.id, data: areaData });
+            areaId = areaEditTarget!.id;
+        } else {
+            const created = await createAreaMutation.mutateAsync(areaData);
+            areaId = created.id;
+        }
+
+        // Sync especialidades: delete removed, create new
+        const existing = getEspecialidadesByArea(areaId);
+        const existingNames = existing.map((e) => e.nome);
+        const toDelete = existing.filter((e) => !espNomes.includes(e.nome));
+        const toCreate = espNomes.filter((n) => !existingNames.includes(n));
+
+        await Promise.all([
+            ...toDelete.map((e) => especialidadeService.remove(e.id).catch(() => {})),
+            ...toCreate.map((nome) => especialidadeService.create({ nome, area_id: areaId })),
+        ]);
+
+        queryClient.invalidateQueries({ queryKey: ["especialidades"] });
+        setAreaFormOpen(false);
+        setAreaEditTarget(null);
+        toast({ title: isEditing ? "Área atualizada!" : "Área cadastrada!" });
     };
 
-    const handleFormSubmit = async (values: Omit<Area, "id" | "created_at">) => {
-        if (editTarget) {
-            await updateMutation.mutateAsync({ id: editTarget.id, data: values });
-        } else {
-            await createMutation.mutateAsync(values);
-        }
+    const openAddArea = (diretoriaId?: string) => {
+        setAreaEditTarget(null);
+        setAreaFormDiretoriaId(diretoriaId);
+        setAreaFormOpen(true);
+    };
+
+    // ── Area row component ────────────────────────────────────
+    const AreaRow = ({ area }: { area: Area }) => {
+        const esps = getEspecialidadesByArea(area.id);
+        return (
+            <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20 transition-colors border-b last:border-0">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                    <div className="min-w-0">
+                        <span className="font-medium text-sm text-foreground">{area.nome}</span>
+                        {area.descricao && (
+                            <p className="text-xs text-muted-foreground truncate max-w-xs">{area.descricao}</p>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                    <span className="text-xs text-muted-foreground hidden sm:block">
+                        {getLideresNames(area.lideres)}
+                    </span>
+                    <span className="text-xs text-muted-foreground hidden md:block">
+                        {esps.length} especialidade{esps.length !== 1 ? "s" : ""}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                        <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            title="Gerenciar Especialidades"
+                            onClick={() => { setEspDialogArea(area); setEspFormOpen(false); }}
+                        >
+                            <BookOpen className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                            onClick={() => { setAreaEditTarget(area); setAreaFormDiretoriaId(undefined); setAreaFormOpen(true); }}
+                        >
+                            <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => setAreaDeleteTarget(area)}
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Áreas</h1>
-                    <p className="text-muted-foreground text-sm mt-1">
-                        {isLoading ? "Carregando..." : `${filtered.length} área(s) encontrada(s)`}
-                    </p>
-                </div>
-                <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
+        <PageLayout
+            title="Estrutura Organizacional"
+            subtitle={isLoading ? "Carregando..." : `${diretorias.length} diretoria(s) · ${areas.length} área(s)`}
+        >
+
+            <Tabs defaultValue="estrutura">
+                <TabsList>
+                    <TabsTrigger value="estrutura">Estrutura</TabsTrigger>
+                    <TabsTrigger value="orgchart">Org Chart</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="orgchart" className="mt-4" style={{ height: "calc(100vh - 13rem)" }}>
+                    <OrgChartView />
+                </TabsContent>
+
+                <TabsContent value="estrutura" className="mt-4">
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setDirEditTarget(null); setDirFormOpen(true); }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Diretoria
+                </Button>
+                <Button onClick={() => openAddArea()}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Área
                 </Button>
             </div>
 
-            {/* Filters */}
-            <div className="bg-card rounded-xl border shadow-sm p-4">
+            {/* Search */}
+            <FilterBar className="mt-4">
                 <div className="relative max-w-sm">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Buscar por nome..."
+                        placeholder="Buscar diretoria ou área..."
                         value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="pl-9"
                     />
                 </div>
-            </div>
+            </FilterBar>
 
-            {/* Table */}
-            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-muted/40">
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                    <button
-                                        onClick={() => handleSort("nome")}
-                                        className="flex items-center hover:text-foreground transition-colors"
-                                    >
-                                        Nome <SortIcon field="nome" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                    Líderes
-                                </th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">
-                                    Subáreas Possíveis
-                                </th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
-                                    Ações
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading
-                                ? [...Array(5)].map((_, i) => (
-                                    <tr key={i} className="border-b">
-                                        <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                        <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-40" /></td>
-                                        <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
-                                        <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
-                                    </tr>
-                                ))
-                                : paginated.length === 0
-                                    ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                                                Nenhuma área encontrada. Clique em "Nova Área" para cadastrar.
-                                            </td>
-                                        </tr>
-                                    )
-                                    : paginated.map((a) => (
-                                        <tr
-                                            key={a.id}
-                                            className="border-b last:border-0 hover:bg-muted/20 transition-colors"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-foreground">{a.nome}</div>
-                                                {a.descricao && (
-                                                    <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{a.descricao}</div>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell min-w-[200px] max-w-[300px] truncate">
-                                                {getLideresNames(a.lideres)}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {a.subareas_possiveis && a.subareas_possiveis.length > 0
-                                                        ? a.subareas_possiveis.map(sa => (
-                                                            <span key={sa} className="inline-flex bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                                                                {sa}
-                                                            </span>
-                                                        ))
-                                                        : "-"}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                        onClick={() => { setEditTarget(a); setFormOpen(true); }}
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => setDeleteTarget(a)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                {!isLoading && filtered.length > PAGE_SIZE && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                        <p className="text-sm text-muted-foreground">
-                            Página {page} de {totalPages} — {filtered.length} registros
-                        </p>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                            >
-                                Anterior
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                            >
-                                Próxima
-                            </Button>
+            {/* Accordion list */}
+            <div className="space-y-3">
+                {isLoading
+                    ? [...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-card rounded-xl border shadow-sm p-4">
+                            <Skeleton className="h-5 w-48" />
                         </div>
-                    </div>
-                )}
+                    ))
+                    : filteredDiretorias.length === 0 && unassignedAreas.length === 0
+                        ? (
+                            <div className="bg-card rounded-xl border shadow-sm px-4 py-12 text-center text-muted-foreground">
+                                Nenhuma diretoria encontrada. Clique em "Nova Diretoria" para começar.
+                            </div>
+                        )
+                        : (
+                            <>
+                                {filteredDiretorias.map((dir) => {
+                                    const expanded = expandedDiretorias.has(dir.id);
+                                    const dirAreas = getAreasByDiretoria(dir.id);
+                                    const filteredAreas = search
+                                        ? dirAreas.filter((a) => a.nome.toLowerCase().includes(search.toLowerCase()))
+                                        : dirAreas;
+
+                                    return (
+                                        <div key={dir.id} className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                            {/* Diretoria header */}
+                                            <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+                                                <button
+                                                    className="flex items-center gap-2 flex-1 text-left"
+                                                    onClick={() => toggleDiretoria(dir.id)}
+                                                >
+                                                    {expanded
+                                                        ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                        : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                                                    <span className="font-semibold text-foreground">{dir.nome}</span>
+                                                    {dir.descricao && (
+                                                        <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-xs">
+                                                            — {dir.descricao}
+                                                        </span>
+                                                    )}
+                                                    <span className="ml-2 text-xs text-muted-foreground shrink-0">
+                                                        {dirAreas.length} área{dirAreas.length !== 1 ? "s" : ""}
+                                                    </span>
+                                                </button>
+                                                <div className="flex items-center gap-0.5 shrink-0">
+                                                    <Button
+                                                        variant="ghost" size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                        title="Ver colaboradores"
+                                                        onClick={() => setDetailDiretoria(dir)}
+                                                    >
+                                                        <BarChart2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost" size="sm"
+                                                        className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
+                                                        onClick={() => {
+                                                            openAddArea(dir.id);
+                                                            setExpandedDiretorias((prev) => new Set([...prev, dir.id]));
+                                                        }}
+                                                    >
+                                                        <Plus className="h-3 w-3" /> Área
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost" size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                        onClick={() => { setDirEditTarget(dir); setDirFormOpen(true); }}
+                                                    >
+                                                        <Edit2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost" size="icon"
+                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                        onClick={() => setDirDeleteTarget(dir)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Areas list */}
+                                            {expanded && (
+                                                <div className="divide-y divide-border/50">
+                                                    {filteredAreas.length === 0 ? (
+                                                        <p className="px-8 py-4 text-sm text-muted-foreground">
+                                                            Nenhuma área nesta diretoria.
+                                                        </p>
+                                                    ) : (
+                                                        filteredAreas.map((area) => (
+                                                            <AreaRow key={area.id} area={area} />
+                                                        ))
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Unassigned areas */}
+                                {unassignedAreas.length > 0 && (
+                                    <div className="bg-card rounded-xl border border-dashed shadow-sm overflow-hidden">
+                                        <div
+                                            className="flex items-center gap-2 px-4 py-3 bg-muted/10 cursor-pointer"
+                                            onClick={() => toggleDiretoria("__unassigned__")}
+                                        >
+                                            {expandedDiretorias.has("__unassigned__")
+                                                ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                            <span className="font-medium text-muted-foreground text-sm">
+                                                Sem diretoria ({unassignedAreas.length})
+                                            </span>
+                                        </div>
+                                        {expandedDiretorias.has("__unassigned__") && (
+                                            <div className="divide-y divide-border/50">
+                                                {unassignedAreas.map((area) => (
+                                                    <AreaRow key={area.id} area={area} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
             </div>
 
-            {/* Modals */}
+                </TabsContent>
+            </Tabs>
+
+            {/* ── Modals ── */}
+
+            {/* Diretoria form */}
+            <Dialog open={dirFormOpen} onOpenChange={(v) => { if (!v) { setDirFormOpen(false); setDirEditTarget(null); } }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{dirEditTarget ? "Editar Diretoria" : "Nova Diretoria"}</DialogTitle>
+                    </DialogHeader>
+                    <DiretoriaForm
+                        diretoria={dirEditTarget ?? undefined}
+                        onSuccess={() => { setDirFormOpen(false); setDirEditTarget(null); }}
+                        onSubmit={handleDirFormSubmit}
+                        onCancel={() => { setDirFormOpen(false); setDirEditTarget(null); }}
+                        isLoading={createDirMutation.isPending || updateDirMutation.isPending}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Diretoria delete */}
+            {dirDeleteTarget && (
+                <DiretoriaDeleteDialog
+                    diretoria={dirDeleteTarget}
+                    open={!!dirDeleteTarget}
+                    onOpenChange={(v) => { if (!v) setDirDeleteTarget(null); }}
+                    onConfirm={() => deleteDirMutation.mutate(dirDeleteTarget.id)}
+                    isLoading={deleteDirMutation.isPending}
+                />
+            )}
+
+            {/* Area form */}
             <AreaForm
-                open={formOpen}
-                onClose={() => { setFormOpen(false); setEditTarget(null); }}
-                onSubmit={handleFormSubmit}
-                initialData={editTarget}
-                isLoading={createMutation.isPending || updateMutation.isPending}
+                open={areaFormOpen}
+                onClose={() => { setAreaFormOpen(false); setAreaEditTarget(null); }}
+                onSubmit={handleAreaFormSubmit}
+                initialData={areaEditTarget ?? (areaFormDiretoriaId ? { diretoria_id: areaFormDiretoriaId } as any : null)}
+                existingEspecialidades={areaEditTarget ? getEspecialidadesByArea(areaEditTarget.id) : []}
+                isLoading={createAreaMutation.isPending || updateAreaMutation.isPending}
             />
 
-            <DeleteConfirmDialog
-                open={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-                nome={deleteTarget?.nome ?? ""}
-                isLoading={deleteMutation.isPending}
+            {/* Area delete */}
+            <AreaDeleteDialog
+                open={!!areaDeleteTarget}
+                onClose={() => setAreaDeleteTarget(null)}
+                onConfirm={() => areaDeleteTarget && deleteAreaMutation.mutate(areaDeleteTarget.id)}
+                nome={areaDeleteTarget?.nome ?? ""}
+                isLoading={deleteAreaMutation.isPending}
             />
-        </div>
+
+            {/* Especialidades dialog */}
+            <Dialog
+                open={!!espDialogArea}
+                onOpenChange={(v) => { if (!v) { setEspDialogArea(null); setEspFormOpen(false); } }}
+            >
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Especialidades — {espDialogArea?.nome}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {espDialogArea && getEspecialidadesByArea(espDialogArea.id).length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                    Nenhuma especialidade cadastrada para esta área.
+                                </p>
+                            ) : (
+                                espDialogArea && getEspecialidadesByArea(espDialogArea.id).map((esp) => (
+                                    <div key={esp.id} className="flex items-center justify-between rounded-lg border px-3 py-2 bg-muted/20">
+                                        <div>
+                                            <p className="text-sm font-medium">{esp.nome}</p>
+                                            {esp.descricao && <p className="text-xs text-muted-foreground">{esp.descricao}</p>}
+                                        </div>
+                                        <Button
+                                            variant="ghost" size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                            onClick={() => setEspDeleteTarget(esp)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        {espFormOpen ? (
+                            <div className="border rounded-lg p-4 bg-muted/10">
+                                <p className="text-sm font-medium mb-3">Nova Especialidade</p>
+                                <EspecialidadeForm
+                                    especialidade={espDialogArea ? { id: "", nome: "", area_id: espDialogArea.id } : undefined}
+                                    areas={espDialogArea ? [espDialogArea] : []}
+                                    onSubmit={async (values) => {
+                                        if (!values.nome) return;
+                                        await createEspMutation.mutateAsync({
+                                            nome: values.nome,
+                                            area_id: espDialogArea?.id ?? values.area_id,
+                                            descricao: values.descricao,
+                                        });
+                                    }}
+                                    onCancel={() => setEspFormOpen(false)}
+                                    isLoading={createEspMutation.isPending}
+                                />
+                            </div>
+                        ) : (
+                            <Button variant="outline" size="sm" className="w-full" onClick={() => setEspFormOpen(true)}>
+                                <Plus className="mr-2 h-4 w-4" /> Adicionar Especialidade
+                            </Button>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Especialidade delete */}
+            {espDeleteTarget && (
+                <EspecialidadeDeleteDialog
+                    especialidade={espDeleteTarget}
+                    open={!!espDeleteTarget}
+                    onOpenChange={(v) => { if (!v) setEspDeleteTarget(null); }}
+                    onConfirm={() => deleteEspMutation.mutate(espDeleteTarget.id)}
+                    isLoading={deleteEspMutation.isPending}
+                />
+            )}
+
+            {/* Diretoria detail panel */}
+            <DiretoriaDetailPanel
+                diretoria={detailDiretoria}
+                open={!!detailDiretoria}
+                onClose={() => setDetailDiretoria(null)}
+                colaboradores={allColaboradores}
+                areas={areas}
+                especialidades={especialidades}
+                torres={torres}
+                squads={squads}
+            />
+        </PageLayout>
     );
 }

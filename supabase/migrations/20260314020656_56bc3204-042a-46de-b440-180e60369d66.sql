@@ -1,4 +1,4 @@
--- Tabela Áreas (sem campo pilar - área É o pilar no sistema)
+-- 1. CRIAR TABELAS INDEPENDENTES
 CREATE TABLE IF NOT EXISTS public.areas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
@@ -9,35 +9,16 @@ CREATE TABLE IF NOT EXISTS public.areas (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_areas_nome ON public.areas(nome);
-
-ALTER TABLE public.areas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read areas" ON public.areas FOR SELECT USING (true);
-CREATE POLICY "Allow public insert areas" ON public.areas FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update areas" ON public.areas FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete areas" ON public.areas FOR DELETE USING (true);
-
-CREATE TRIGGER update_areas_updated_at
-  BEFORE UPDATE ON public.areas
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Tabela de relação Colaborador <-> Area (many-to-many)
-CREATE TABLE IF NOT EXISTS public.colaborador_areas (
-  colaborador_id UUID REFERENCES public.colaboradores(id) ON DELETE CASCADE,
-  area_id UUID REFERENCES public.areas(id) ON DELETE CASCADE,
-  PRIMARY KEY (colaborador_id, area_id)
+-- Criando a tabela de colaboradores que estava faltando no seu schema
+CREATE TABLE IF NOT EXISTS public.colaboradores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  email TEXT UNIQUE,
+  cargo TEXT,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_colaborador_areas_colab ON public.colaborador_areas(colaborador_id);
-CREATE INDEX IF NOT EXISTS idx_colaborador_areas_area ON public.colaborador_areas(area_id);
-
-ALTER TABLE public.colaborador_areas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read colaborador_areas" ON public.colaborador_areas FOR SELECT USING (true);
-CREATE POLICY "Allow public insert colaborador_areas" ON public.colaborador_areas FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update colaborador_areas" ON public.colaborador_areas FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete colaborador_areas" ON public.colaborador_areas FOR DELETE USING (true);
-
--- Tabela Contratos
 CREATE TABLE IF NOT EXISTS public.contratos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nome TEXT NOT NULL,
@@ -45,26 +26,37 @@ CREATE TABLE IF NOT EXISTS public.contratos (
   valor_total DECIMAL(12,2),
   data_inicio DATE NOT NULL,
   data_fim DATE,
-  status TEXT NOT NULL DEFAULT 'Ativo',
+  status TEXT NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Encerrado', 'Pausado')),
   descricao TEXT,
   torres UUID[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  CONSTRAINT contratos_status_check CHECK (status IN ('Ativo', 'Encerrado', 'Pausado'))
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- 2. CRIAR TABELAS DE RELAÇÃO (DEPENDENTES)
+CREATE TABLE IF NOT EXISTS public.colaborador_areas (
+  colaborador_id UUID REFERENCES public.colaboradores(id) ON DELETE CASCADE,
+  area_id UUID REFERENCES public.areas(id) ON DELETE CASCADE,
+  PRIMARY KEY (colaborador_id, area_id)
+);
+
+-- 3. ÍNDICES
+CREATE INDEX IF NOT EXISTS idx_areas_nome ON public.areas(nome);
+CREATE INDEX IF NOT EXISTS idx_colaborador_areas_colab ON public.colaborador_areas(colaborador_id);
 CREATE INDEX IF NOT EXISTS idx_contratos_status ON public.contratos(status);
-CREATE INDEX IF NOT EXISTS idx_contratos_cliente ON public.contratos(cliente);
 
+-- 4. RLS (SEGURANÇA)
+ALTER TABLE public.areas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.colaboradores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contratos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read contratos" ON public.contratos FOR SELECT USING (true);
-CREATE POLICY "Allow public insert contratos" ON public.contratos FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update contratos" ON public.contratos FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete contratos" ON public.contratos FOR DELETE USING (true);
+ALTER TABLE public.colaborador_areas ENABLE ROW LEVEL SECURITY;
 
-CREATE TRIGGER update_contratos_updated_at
-  BEFORE UPDATE ON public.contratos
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE POLICY "Allow public access" ON public.areas FOR ALL USING (true);
+CREATE POLICY "Allow public access" ON public.colaboradores FOR ALL USING (true);
+CREATE POLICY "Allow public access" ON public.contratos FOR ALL USING (true);
+CREATE POLICY "Allow public access" ON public.colaborador_areas FOR ALL USING (true);
 
--- Remover coluna 'pilar' da tabela colaboradores (pilar = area agora)
-ALTER TABLE public.colaboradores DROP COLUMN IF EXISTS pilar;
+-- 5. TRIGGERS
+CREATE TRIGGER update_areas_updated_at BEFORE UPDATE ON public.areas FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_colaboradores_updated_at BEFORE UPDATE ON public.colaboradores FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_contratos_updated_at BEFORE UPDATE ON public.contratos FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

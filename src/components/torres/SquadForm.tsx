@@ -19,9 +19,13 @@ import { cn } from "@/lib/utils";
 
 import { Squad } from "@/types/torre";
 import { colaboradorService } from "@/services/colaboradorService";
+import { contratoService } from "@/services/contratoService";
+import { torreService } from "@/services/torreService";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
+    torre_id: z.string().min(1, "Selecione uma Torre"),
+    contrato_id: z.string().nullable().optional(),
     lider: z.string().nullable().optional(),
     membros: z.array(z.string()).default([]),
     descricao: z.string().nullable().optional()
@@ -30,15 +34,14 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface SquadFormProps {
-    torreId: string;
     open: boolean;
     onClose: () => void;
-    onSubmit: (values: FormValues & { torre_id: string }) => Promise<void>;
+    onSubmit: (values: FormValues) => Promise<void>;
     initialData?: Squad | null;
     isLoading?: boolean;
 }
 
-export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoading }: SquadFormProps) {
+export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: SquadFormProps) {
     const isEdit = !!initialData;
     const [comboOpen, setComboOpen] = useState(false);
 
@@ -47,10 +50,22 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
         queryFn: () => colaboradorService.getAll(),
     });
 
+    const { data: contratos = [] } = useQuery({
+        queryKey: ["contratos"],
+        queryFn: () => contratoService.getAll(),
+    });
+
+    const { data: torres = [] } = useQuery({
+        queryKey: ["torres"],
+        queryFn: () => torreService.getAllTorres(),
+    });
+
     const form = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
             nome: "",
+            torre_id: "",
+            contrato_id: null,
             lider: null,
             membros: [],
             descricao: "",
@@ -62,6 +77,8 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
             if (initialData) {
                 form.reset({
                     nome: initialData.nome,
+                    torre_id: initialData.torre_id,
+                    contrato_id: initialData.contrato_id || null,
                     lider: initialData.lider,
                     membros: initialData.membros || [],
                     descricao: initialData.descricao || "",
@@ -69,6 +86,8 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
             } else {
                 form.reset({
                     nome: "",
+                    torre_id: "",
+                    contrato_id: null,
                     lider: null,
                     membros: [],
                     descricao: "",
@@ -78,7 +97,9 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
     }, [open, initialData, form]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
-        await onSubmit({ ...values, torre_id: torreId });
+        const payload = { ...values };
+        if (payload.contrato_id === "none") payload.contrato_id = null;
+        await onSubmit(payload);
     });
 
     return (
@@ -101,17 +122,38 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
                             </FormItem>
                         )} />
 
-                        <FormField control={form.control} name="lider" render={({ field }) => (
+                        <FormField control={form.control} name="torre_id" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Líder do Squad</FormLabel>
+                                <FormLabel>Torre Associada *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Selecione o Líder" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Selecione uma Torre" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {torres.map((t) => (
+                                            <SelectItem key={t.id} value={t.id}>
+                                                {t.nome}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="contrato_id" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Contrato Relacionado</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Selecione um contrato" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                         <SelectItem value="none">Nenhum</SelectItem>
-                                        {colaboradores.map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
+                                        {contratos.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                {c.nome} ({c.cliente})
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -174,7 +216,7 @@ export function SquadForm({ torreId, open, onClose, onSubmit, initialData, isLoa
                                                                 }}
                                                             >
                                                                 <Check className={cn("mr-2 h-4 w-4", field.value.includes(colab.id) ? "opacity-100" : "opacity-0")} />
-                                                                {colab.nomeCompleto} <span className="text-muted-foreground ml-2 text-xs">({colab.cargo})</span>
+                                                                {colab.nomeCompleto} <span className="text-muted-foreground ml-2 text-xs">({colab.senioridade})</span>
                                                             </CommandItem>
                                                         ))}
                                                     </ScrollArea>

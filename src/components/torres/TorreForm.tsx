@@ -14,11 +14,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Torre } from "@/types/torre";
 import { colaboradorService } from "@/services/colaboradorService";
-import { contratoService } from "@/services/contratoService";
+import { areaService } from "@/services/areaService";
+import { businessUnitService } from "@/services/businessUnitService";
+import { filterColaboradores, filterColaboradoresBySenioridades } from "@/utils/filterColaboradores";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
-    contrato_id: z.string().min(1, "Selecione um contrato").nullable(),
+    bu_id: z.string().nullable().optional(),
     responsavel_negocio: z.string().nullable().optional(),
     head_tecnologia: z.string().nullable().optional(),
     head_produto: z.string().nullable().optional(),
@@ -40,21 +42,33 @@ interface TorreFormProps {
 export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: TorreFormProps) {
     const isEdit = !!initialData;
 
-    const { data: colaboradores = [] } = useQuery({
+    const { data: colaboradores = [], isLoading: colaboradoresLoading } = useQuery({
         queryKey: ["colaboradores"],
         queryFn: () => colaboradorService.getAll(),
     });
 
-    const { data: contratos = [] } = useQuery({
-        queryKey: ["contratos"],
-        queryFn: () => contratoService.getAll(),
+    const { data: areas = [], isLoading: areasLoading } = useQuery({
+        queryKey: ["areas"],
+        queryFn: () => areaService.getAll(),
     });
+
+    const { data: businessUnits = [] } = useQuery({
+        queryKey: ["business_units"],
+        queryFn: () => businessUnitService.getAll(),
+    });
+
+    const headsTecnologia = filterColaboradores(colaboradores, areas, "Head", "tecnologia");
+    const headsProduto = filterColaboradores(colaboradores, areas, "Head", "produto");
+    const gerentesProduto = filterColaboradores(colaboradores, areas, "Gerente", "produto");
+    const gerentesDesign = filterColaboradores(colaboradores, areas, "Gerente", "design");
+    const responsaveisNegocio = filterColaboradoresBySenioridades(colaboradores, ["C-level", "Diretor(a)", "Head"]);
+
 
     const form = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
             nome: "",
-            contrato_id: null,
+            bu_id: null,
             responsavel_negocio: null,
             head_tecnologia: null,
             head_produto: null,
@@ -69,7 +83,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
             if (initialData) {
                 form.reset({
                     nome: initialData.nome,
-                    contrato_id: initialData.contrato_id,
+                    bu_id: initialData.bu_id,
                     responsavel_negocio: initialData.responsavel_negocio,
                     head_tecnologia: initialData.head_tecnologia,
                     head_produto: initialData.head_produto,
@@ -80,7 +94,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
             } else {
                 form.reset({
                     nome: "",
-                    contrato_id: null,
+                    bu_id: null,
                     responsavel_negocio: null,
                     head_tecnologia: null,
                     head_produto: null,
@@ -93,7 +107,14 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
     }, [open, initialData, form]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
-        await onSubmit(values);
+        const payload = { ...values };
+        if (payload.bu_id === "none") payload.bu_id = null;
+        if (payload.responsavel_negocio === "none") payload.responsavel_negocio = null;
+        if (payload.head_tecnologia === "none") payload.head_tecnologia = null;
+        if (payload.head_produto === "none") payload.head_produto = null;
+        if (payload.gerente_produto === "none") payload.gerente_produto = null;
+        if (payload.gerente_design === "none") payload.gerente_design = null;
+        await onSubmit(payload);
     });
 
     return (
@@ -118,24 +139,18 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                 </FormItem>
                             )} />
 
-                            {/* Contrato */}
-                            <FormField control={form.control} name="contrato_id" render={({ field }) => (
+                            {/* Business Unit */}
+                            <FormField control={form.control} name="bu_id" render={({ field }) => (
                                 <FormItem className="sm:col-span-2">
-                                    <FormLabel>Contrato Relacionado *</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value || undefined}
-                                    >
+                                    <FormLabel>Business Unit</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione um contrato" />
-                                            </SelectTrigger>
+                                            <SelectTrigger><SelectValue placeholder="Selecione a BU" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {contratos.map((c) => (
-                                                <SelectItem key={c.id} value={c.id}>
-                                                    {c.nome} ({c.cliente})
-                                                </SelectItem>
+                                            <SelectItem value="none">Nenhuma</SelectItem>
+                                            {businessUnits.map((bu) => (
+                                                <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -143,17 +158,18 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                 </FormItem>
                             )} />
 
+
                             {/* Responsável Negócio */}
                             <FormField control={form.control} name="responsavel_negocio" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Responsável pelo Negócio</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
-                                            {colaboradores.map((c) => (
+                                            {responsaveisNegocio.map((c) => (
                                                 <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -168,11 +184,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Head de Tecnologia</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
-                                            {colaboradores.map((c) => (
+                                            {headsTecnologia.map((c) => (
                                                 <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -187,11 +203,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Head de Produto</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
-                                            {colaboradores.map((c) => (
+                                            {headsProduto.map((c) => (
                                                 <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -206,11 +222,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Gerente de Produto</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
-                                            {colaboradores.map((c) => (
+                                            {gerentesProduto.map((c) => (
                                                 <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -225,11 +241,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Gerente de Design</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
-                                            {colaboradores.map((c) => (
+                                            {gerentesDesign.map((c) => (
                                                 <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
                                             ))}
                                         </SelectContent>

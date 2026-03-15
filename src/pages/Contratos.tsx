@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageLayout, FilterBar } from "@/components/ui/page-layout";
 import {
     Select,
     SelectContent,
@@ -15,19 +17,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 import { ContratoForm } from "@/components/contratos/ContratoForm";
+import { ContratoDetailPanel } from "@/components/contratos/ContratoDetailPanel";
 import { DeleteConfirmDialog } from "@/components/contratos/DeleteConfirmDialog";
 import { contratoService } from "@/services/contratoService";
+import { torreService } from "@/services/torreService";
 import { type Contrato, CONTRATO_STATUS } from "@/types/contrato";
 
-type SortField = "nome" | "cliente" | "status" | "valor_total" | "data_fim";
+type SortField = "nome" | "cliente" | "status" | "valor" | "data_fim";
 type SortDir = "asc" | "desc";
 
 export default function Contratos() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Filters
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterCliente, setFilterCliente] = useState<string>("all");
 
@@ -43,11 +48,29 @@ export default function Contratos() {
     const [formOpen, setFormOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Contrato | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Contrato | null>(null);
+    const [detailTarget, setDetailTarget] = useState<Contrato | null>(null);
 
     const { data: contratos = [], isLoading } = useQuery({
         queryKey: ["contratos"],
         queryFn: () => contratoService.getAll(),
     });
+
+    const { data: torres = [] } = useQuery({
+        queryKey: ["torres"],
+        queryFn: () => torreService.getAllTorres().catch(() => []),
+    });
+
+    const { data: squads = [] } = useQuery({
+        queryKey: ["squads"],
+        queryFn: () => torreService.getAllSquads().catch(() => []),
+    });
+
+    // Clear URL param after applying search from global search
+    useEffect(() => {
+        if (searchParams.get("search")) {
+            setSearchParams({}, { replace: true });
+        }
+    }, []);
 
     const createMutation = useMutation({
         mutationFn: (data: Omit<Contrato, "id" | "created_at">) => contratoService.create(data),
@@ -64,6 +87,8 @@ export default function Contratos() {
             contratoService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["contratos"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["torres"] });
             setFormOpen(false);
             setEditTarget(null);
             toast({ title: "Contrato atualizado!", description: "Dados alterados com sucesso." });
@@ -97,7 +122,7 @@ export default function Contratos() {
                 const av = a[sortField] ?? "";
                 const bv = b[sortField] ?? "";
 
-                if (sortField === "valor_total") {
+                if (sortField === "valor") {
                     return sortDir === "asc" ? (Number(av) || 0) - (Number(bv) || 0) : (Number(bv) || 0) - (Number(av) || 0);
                 }
 
@@ -137,7 +162,7 @@ export default function Contratos() {
             `"${c.nome}"`,
             `"${c.cliente}"`,
             c.status,
-            c.valor_total || 0,
+            c.valor || 0,
             c.data_inicio,
             c.data_fim || ""
         ]);
@@ -184,15 +209,10 @@ export default function Contratos() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Projetos Contratuais</h1>
-                    <p className="text-muted-foreground text-sm mt-1">
-                        {isLoading ? "Carregando..." : `${filtered.length} contrato(s) encontrado(s)`}
-                    </p>
-                </div>
+        <PageLayout
+            title="Projetos Contratuais"
+            subtitle={isLoading ? "Carregando..." : `${filtered.length} contrato(s) encontrado(s)`}
+            action={
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={handleExportCSV}>
                         <Download className="mr-2 h-4 w-4" />
@@ -203,10 +223,10 @@ export default function Contratos() {
                         Novo Contrato
                     </Button>
                 </div>
-            </div>
-
+            }
+        >
             {/* Filters */}
-            <div className="bg-card rounded-xl border shadow-sm p-4">
+            <FilterBar>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -238,7 +258,7 @@ export default function Contratos() {
                         </SelectContent>
                     </Select>
                 </div>
-            </div>
+            </FilterBar>
 
             {/* Table */}
             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -272,10 +292,10 @@ export default function Contratos() {
                                 </th>
                                 <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
                                     <button
-                                        onClick={() => handleSort("valor_total")}
+                                        onClick={() => handleSort("valor")}
                                         className="flex items-center justify-end hover:text-foreground transition-colors ml-auto"
                                     >
-                                        Valor <SortIcon field="valor_total" />
+                                        Valor <SortIcon field="valor" />
                                     </button>
                                 </th>
                                 <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
@@ -322,13 +342,23 @@ export default function Contratos() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right font-mono text-xs">
-                                                {formatCurrency(c.valor_total)}
+                                                <div>{formatCurrency(c.valor)}</div>
+                                                <div className="text-[10px] opacity-60">{c.contract_type === "Aberto" ? "mensal" : "total"}</div>
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right text-xs">
                                                 {formatDate(c.data_fim)}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                        title="Ver detalhes"
+                                                        onClick={() => setDetailTarget(c)}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
@@ -397,6 +427,14 @@ export default function Contratos() {
                 nome={deleteTarget?.nome ?? ""}
                 isLoading={deleteMutation.isPending}
             />
-        </div>
+
+            <ContratoDetailPanel
+                contrato={detailTarget}
+                open={!!detailTarget}
+                onClose={() => setDetailTarget(null)}
+                torres={torres}
+                squads={squads}
+            />
+        </PageLayout>
     );
 }

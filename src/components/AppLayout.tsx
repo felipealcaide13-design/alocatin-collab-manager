@@ -1,13 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Menu, X, Layers, FileText } from "lucide-react";
+import { LayoutDashboard, Users, Menu, X, Layers, FileText, Building2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
+  { icon: Building2, label: "Business Units", to: "/business-units" },
   { icon: FileText, label: "Contratos", to: "/contratos" },
   { icon: Users, label: "Colaboradores", to: "/colaboradores" },
-  { icon: Layers, label: "Áreas", to: "/areas" },
+  { icon: Layers, label: "Estrutura Org.", to: "/areas" },
 ];
 
 interface AppLayoutProps {
@@ -30,7 +32,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             onClick={() => setMobileOpen(false)}
             className={cn(
               "sidebar-nav-item",
-              active ? "sidebar-nav-active" : "sidebar-nav-inactive"
+              active
+                ? "bg-[var(--primary-800)] text-white border-l-2 border-[var(--primary-600)]"
+                : "text-white/70 hover:bg-[var(--primary-800)]/60 hover:text-white"
             )}
           >
             <Icon size={18} />
@@ -42,7 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="h-screen flex w-full bg-background overflow-hidden">
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
@@ -54,29 +58,29 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar - Desktop */}
       <aside
         className={cn(
-          "hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-20",
+          "hidden md:flex flex-col bg-[var(--primary-900)] border-r border-[var(--primary-800)] transition-all duration-300 z-20",
           sidebarOpen ? "w-60" : "w-16"
         )}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
           {sidebarOpen && (
-            <span className="text-sidebar-primary-foreground font-bold text-lg tracking-tight">
-              <span className="text-primary">Aloca</span>tin
+            <span className="font-bold text-lg tracking-tight">
+              <span className="text-[#72CADF]">Aloca</span><span className="text-white">tin</span>
             </span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-sidebar-foreground hover:text-sidebar-accent-foreground p-1 rounded-md hover:bg-sidebar-accent/50 transition-colors ml-auto"
+            className="text-white/70 hover:text-white hover:bg-[var(--primary-800)]/60 p-1 rounded-md transition-colors ml-auto"
           >
             <Menu size={18} />
           </button>
         </div>
-        <div className="flex-1 px-3 py-2">
+        <div className="flex-1 px-3 py-2 overflow-y-auto">
           <NavLinks />
         </div>
         {sidebarOpen && (
-          <div className="px-4 py-3 border-t border-sidebar-border">
-            <p className="text-xs text-sidebar-foreground/60">Alocatin v1.0</p>
+          <div className="px-4 py-3 border-t border-[var(--primary-800)] shrink-0">
+            <p className="text-xs text-white/40">Alocatin v1.0</p>
           </div>
         )}
       </aside>
@@ -84,15 +88,15 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar - Mobile */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-40 flex flex-col transition-transform duration-300 md:hidden",
+          "fixed left-0 top-0 h-full w-64 bg-[var(--primary-900)] border-r border-[var(--primary-800)] z-40 flex flex-col transition-transform duration-300 md:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-          <span className="text-sidebar-primary-foreground font-bold text-lg tracking-tight">
-            <span className="text-primary">Aloca</span>tin
+        <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
+          <span className="font-bold text-lg tracking-tight">
+            <span className="text-[#72CADF]">Aloca</span><span className="text-white">tin</span>
           </span>
-          <button onClick={() => setMobileOpen(false)} className="text-sidebar-foreground p-1 rounded-md hover:bg-sidebar-accent/50">
+          <button onClick={() => setMobileOpen(false)} className="text-white/70 hover:text-white hover:bg-[var(--primary-800)]/60 p-1 rounded-md transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -104,22 +108,18 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-card border-b border-border shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
-            >
-              <Menu size={20} />
-            </button>
-            <span className="font-bold text-xl tracking-tight">
-              <span className="text-primary">Aloca</span>tin
-            </span>
+        <header className="h-16 flex items-center gap-4 px-4 md:px-6 bg-card border-b border-border shadow-sm">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="md:hidden p-2 rounded-md hover:bg-muted transition-colors shrink-0"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="flex-1">
+            <GlobalSearch />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
-              A
-            </div>
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold shrink-0">
+            A
           </div>
         </header>
 

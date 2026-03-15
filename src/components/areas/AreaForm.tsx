@@ -25,23 +25,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { type Area } from "@/types/area";
+import { type Especialidade } from "@/types/especialidade";
+import { diretoriaService } from "@/services/diretoriaService";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
+    diretoria_id: z.string().min(1, "Selecione uma Diretoria"),
     lideres: z.array(z.string()).default([]),
     descricao: z.string().optional(),
-    subareas_possiveis: z.array(z.string()).default([]),
+    especialidades: z.array(z.string()).default([]),
 });
 
-type FormValues = z.infer<typeof schema>;
+export type AreaFormValues = z.infer<typeof schema>;
 
 interface AreaFormProps {
     open: boolean;
     onClose: () => void;
-    onSubmit: (values: FormValues) => Promise<void>;
+    onSubmit: (values: AreaFormValues) => Promise<void>;
     initialData?: Area | null;
+    /** Especialidades já cadastradas para esta área (usado na edição) */
+    existingEspecialidades?: Especialidade[];
     isLoading?: boolean;
 }
 
@@ -50,79 +56,84 @@ export function AreaForm({
     onClose,
     onSubmit,
     initialData,
+    existingEspecialidades = [],
     isLoading,
 }: AreaFormProps) {
-    const isEdit = !!initialData;
-    const [subareaInput, setSubareaInput] = useState("");
+    const isEdit = !!initialData?.id;
+    const [espInput, setEspInput] = useState("");
 
-    const form = useForm<FormValues>({
+    const form = useForm<AreaFormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
             nome: "",
+            diretoria_id: "",
             lideres: [],
             descricao: "",
-            subareas_possiveis: [],
+            especialidades: [],
         },
     });
 
     const { data: colaboradores = [], isLoading: isColabsLoading } = useQuery({
         queryKey: ["colaboradores-lideres"],
         queryFn: async () => {
-            const { data, error } = await supabase.from('colaboradores').select('id, nome_completo');
-            if (error) {
-                console.warn('Erro ao buscar líderes do Supabase:', error);
-                return [];
-            }
+            const { data, error } = await supabase.from("colaboradores").select("id, nome_completo");
+            if (error) return [];
             return (data || []).map((c: any) => ({ id: c.id, nomeCompleto: c.nome_completo }));
         },
     });
 
+    const { data: diretorias = [] } = useQuery({
+        queryKey: ["diretorias"],
+        queryFn: () => diretoriaService.getAll(),
+    });
+
     useEffect(() => {
         if (open) {
+            const espNomes = existingEspecialidades.map((e) => e.nome);
             if (initialData) {
                 form.reset({
                     nome: initialData.nome,
+                    diretoria_id: initialData.diretoria_id ?? "",
                     lideres: initialData.lideres,
                     descricao: initialData.descricao || "",
-                    subareas_possiveis: initialData.subareas_possiveis,
+                    especialidades: espNomes,
                 });
             } else {
                 form.reset({
                     nome: "",
+                    diretoria_id: (initialData as any)?.diretoria_id ?? "",
                     lideres: [],
                     descricao: "",
-                    subareas_possiveis: [],
+                    especialidades: [],
                 });
             }
+            setEspInput("");
         }
-    }, [open, initialData, form]);
+    }, [open, initialData, existingEspecialidades]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
         await onSubmit(values);
     });
 
-    const subareas = form.watch("subareas_possiveis");
+    const especialidades = form.watch("especialidades");
 
-    const addSubarea = () => {
-        const val = subareaInput.trim();
-        if (val && !subareas.includes(val)) {
-            form.setValue("subareas_possiveis", [...subareas, val]);
+    const addEsp = () => {
+        const val = espInput.trim();
+        if (val && !especialidades.includes(val)) {
+            form.setValue("especialidades", [...especialidades, val]);
         }
-        setSubareaInput("");
+        setEspInput("");
     };
 
-    const handleSubareaKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const handleEspKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" || e.key === ",") {
             e.preventDefault();
-            addSubarea();
+            addEsp();
         }
     };
 
-    const removeSubarea = (subarea: string) => {
-        form.setValue(
-            "subareas_possiveis",
-            subareas.filter((s) => s !== subarea)
-        );
+    const removeEsp = (nome: string) => {
+        form.setValue("especialidades", especialidades.filter((s) => s !== nome));
     };
 
     return (
@@ -150,6 +161,30 @@ export function AreaForm({
                                 )}
                             />
 
+                            {/* Diretoria */}
+                            <FormField
+                                control={form.control}
+                                name="diretoria_id"
+                                render={({ field }) => (
+                                    <FormItem className="sm:col-span-2">
+                                        <FormLabel>Diretoria *</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione uma Diretoria" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {diretorias.map((d) => (
+                                                    <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
                             {/* Descrição */}
                             <FormField
                                 control={form.control}
@@ -165,40 +200,41 @@ export function AreaForm({
                                 )}
                             />
 
-                            {/* Subáreas - Chips Input */}
+                            {/* Especialidades — chips */}
                             <FormField
                                 control={form.control}
-                                name="subareas_possiveis"
+                                name="especialidades"
                                 render={() => (
                                     <FormItem className="sm:col-span-2">
-                                        <FormLabel>Subáreas (Opcional)</FormLabel>
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex bg-background border rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 items-center p-1 px-2">
-                                                <div className="flex flex-wrap gap-1 items-center flex-1">
-                                                    {subareas.map((sa) => (
-                                                        <span
-                                                            key={sa}
-                                                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                                        <FormLabel>Especialidades</FormLabel>
+                                        <p className="text-xs text-muted-foreground -mt-1">
+                                            Digite o nome e pressione Enter para adicionar.
+                                        </p>
+                                        <div className="flex bg-background border rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 items-center p-1 px-2">
+                                            <div className="flex flex-wrap gap-1 items-center flex-1">
+                                                {especialidades.map((esp) => (
+                                                    <span
+                                                        key={esp}
+                                                        className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                                                    >
+                                                        {esp}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeEsp(esp)}
+                                                            className="hover:bg-primary/20 rounded-full p-0.5"
                                                         >
-                                                            {sa}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeSubarea(sa)}
-                                                                className="hover:bg-primary/20 rounded-full p-0.5"
-                                                            >
-                                                                <X className="h-3 w-3" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                    <Input
-                                                        className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-8 min-w-[120px]"
-                                                        placeholder="Digite e aperte Enter..."
-                                                        value={subareaInput}
-                                                        onChange={(e) => setSubareaInput(e.target.value)}
-                                                        onKeyDown={handleSubareaKeyDown}
-                                                        onBlur={addSubarea}
-                                                    />
-                                                </div>
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                                <Input
+                                                    className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-8 min-w-[140px]"
+                                                    placeholder="Ex: Frontend, Backend..."
+                                                    value={espInput}
+                                                    onChange={(e) => setEspInput(e.target.value)}
+                                                    onKeyDown={handleEspKeyDown}
+                                                    onBlur={addEsp}
+                                                />
                                             </div>
                                         </div>
                                         <FormMessage />
@@ -206,7 +242,7 @@ export function AreaForm({
                                 )}
                             />
 
-                            {/* Líderes - Multi Select */}
+                            {/* Líderes */}
                             <FormField
                                 control={form.control}
                                 name="lideres"
@@ -226,32 +262,25 @@ export function AreaForm({
                                                                 key={colab.id}
                                                                 control={form.control}
                                                                 name="lideres"
-                                                                render={({ field }) => {
-                                                                    return (
-                                                                        <FormItem
-                                                                            key={colab.id}
-                                                                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 hover:bg-muted/50 cursor-pointer"
-                                                                        >
-                                                                            <FormControl>
-                                                                                <Checkbox
-                                                                                    checked={field.value?.includes(colab.id)}
-                                                                                    onCheckedChange={(checked) => {
-                                                                                        return checked
-                                                                                            ? field.onChange([...field.value, colab.id])
-                                                                                            : field.onChange(
-                                                                                                field.value?.filter((value) => value !== colab.id)
-                                                                                            );
-                                                                                    }}
-                                                                                />
-                                                                            </FormControl>
-                                                                            <div className="space-y-1 leading-none">
-                                                                                <FormLabel className="font-normal cursor-pointer">
-                                                                                    {colab.nomeCompleto}
-                                                                                </FormLabel>
-                                                                            </div>
-                                                                        </FormItem>
-                                                                    );
-                                                                }}
+                                                                render={({ field }) => (
+                                                                    <FormItem
+                                                                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 hover:bg-muted/50 cursor-pointer"
+                                                                    >
+                                                                        <FormControl>
+                                                                            <Checkbox
+                                                                                checked={field.value?.includes(colab.id)}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    return checked
+                                                                                        ? field.onChange([...field.value, colab.id])
+                                                                                        : field.onChange(field.value?.filter((v) => v !== colab.id));
+                                                                                }}
+                                                                            />
+                                                                        </FormControl>
+                                                                        <FormLabel className="font-normal cursor-pointer">
+                                                                            {colab.nomeCompleto}
+                                                                        </FormLabel>
+                                                                    </FormItem>
+                                                                )}
                                                             />
                                                         ))}
                                                     </div>

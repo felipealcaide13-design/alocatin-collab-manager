@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageLayout, FilterBar } from "@/components/ui/page-layout";
 import {
   Select,
   SelectContent,
@@ -12,12 +14,18 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ColaboradorForm } from "@/components/colaboradores/ColaboradorForm";
+import { ColaboradorDetailPanel } from "@/components/colaboradores/ColaboradorDetailPanel";
 import { DeleteConfirmDialog } from "@/components/colaboradores/DeleteConfirmDialog";
 import { colaboradorService } from "@/services/colaboradorService";
-import { AREAS, type Colaborador } from "@/types/colaborador";
+import { areaService } from "@/services/areaService";
+import { especialidadeService } from "@/services/especialidadeService";
+import { diretoriaService } from "@/services/diretoriaService";
+import { torreService } from "@/services/torreService";
+import { contratoService } from "@/services/contratoService";
+import { type Colaborador } from "@/types/colaborador";
 import { useToast } from "@/hooks/use-toast";
 
-type SortField = "nomeCompleto" | "status" | "area" | "senioridade";
+type SortField = "nomeCompleto" | "status" | "senioridade";
 type SortDir = "asc" | "desc";
 
 export default function Colaboradores() {
@@ -25,20 +33,67 @@ export default function Colaboradores() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
+  const [filterDiretoria, setFilterDiretoria] = useState<string>("all");
   const [filterArea, setFilterArea] = useState<string>("all");
+  const [filterEspecialidade, setFilterEspecialidade] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("nomeCompleto");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Colaborador | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Colaborador | null>(null);
+  const [detailTarget, setDetailTarget] = useState<Colaborador | null>(null);
 
   const { data: colaboradores = [], isLoading } = useQuery({
     queryKey: ["colaboradores"],
     queryFn: () => colaboradorService.getAll(),
+  });
+
+  // Open detail panel when navigated from global search
+  useEffect(() => {
+    const openId = searchParams.get("openId");
+    if (openId && colaboradores.length > 0) {
+      const found = colaboradores.find((c) => c.id === openId);
+      if (found) {
+        setDetailTarget(found);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [colaboradores, searchParams]);
+
+  const { data: fetchedAreas = [] } = useQuery({
+    queryKey: ["areas"],
+    queryFn: () => areaService.getAll(),
+  });
+
+  const { data: especialidades = [] } = useQuery({
+    queryKey: ["especialidades"],
+    queryFn: () => especialidadeService.getAll(),
+  });
+
+  const { data: diretorias = [] } = useQuery({
+    queryKey: ["diretorias"],
+    queryFn: () => diretoriaService.getAll().catch(() => []),
+  });
+
+  const { data: torres = [] } = useQuery({
+    queryKey: ["torres"],
+    queryFn: () => torreService.getAllTorres().catch(() => []),
+  });
+
+  const { data: squads = [] } = useQuery({
+    queryKey: ["squads"],
+    queryFn: () => torreService.getAllSquads().catch(() => []),
+  });
+
+  const { data: contratos = [] } = useQuery({
+    queryKey: ["contratos"],
+    queryFn: () => contratoService.getAll().catch(() => []),
   });
 
   const createMutation = useMutation({
@@ -73,13 +128,36 @@ export default function Colaboradores() {
     onError: (e: Error) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
   });
 
+  // Áreas filtradas pela diretoria selecionada
+  const areasFiltradas = useMemo(() => {
+    if (filterDiretoria === "all") return fetchedAreas;
+    return fetchedAreas.filter((a) => a.diretoria_id === filterDiretoria);
+  }, [fetchedAreas, filterDiretoria]);
+
+  // Especialidades filtradas pela área selecionada
+  const especialidadesFiltradas = useMemo(() => {
+    if (filterArea === "all") {
+      // Se só tem diretoria selecionada, filtra especialidades pelas áreas dessa diretoria
+      if (filterDiretoria !== "all") {
+        const areaIds = areasFiltradas.map((a) => a.id);
+        return especialidades.filter((e) => areaIds.includes(e.area_id));
+      }
+      return especialidades;
+    }
+    return especialidades.filter((e) => e.area_id === filterArea);
+  }, [especialidades, filterArea, filterDiretoria, areasFiltradas]);
+
   const filtered = useMemo(() => {
     return colaboradores
       .filter((c) => {
         const matchSearch = search ? c.nomeCompleto.toLowerCase().includes(search.toLowerCase()) : true;
-        const matchArea = filterArea !== "all" ? c.area === filterArea : true;
+        const matchDiretoria = filterDiretoria !== "all"
+          ? c.area_ids.some((id) => areasFiltradas.map((a) => a.id).includes(id))
+          : true;
+        const matchArea = filterArea !== "all" ? c.area_ids.includes(filterArea) : true;
+        const matchEspecialidade = filterEspecialidade !== "all" ? c.especialidade_id === filterEspecialidade : true;
         const matchStatus = filterStatus !== "all" ? c.status === filterStatus : true;
-        return matchSearch && matchArea && matchStatus;
+        return matchSearch && matchDiretoria && matchArea && matchEspecialidade && matchStatus;
       })
       .sort((a, b) => {
         const av = a[sortField] ?? "";
@@ -88,7 +166,7 @@ export default function Colaboradores() {
           ? String(av).localeCompare(String(bv))
           : String(bv).localeCompare(String(av));
       });
-  }, [colaboradores, search, filterArea, filterStatus, sortField, sortDir]);
+  }, [colaboradores, search, filterDiretoria, filterArea, filterEspecialidade, filterStatus, areasFiltradas, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -119,24 +197,19 @@ export default function Colaboradores() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Colaboradores</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {isLoading ? "Carregando..." : `${filtered.length} colaborador(es) encontrado(s)`}
-          </p>
-        </div>
+    <PageLayout
+      title="Colaboradores"
+      subtitle={isLoading ? "Carregando..." : `${filtered.length} colaborador(es) encontrado(s)`}
+      action={
         <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Colaborador
         </Button>
-      </div>
-
+      }
+    >
       {/* Filters */}
-      <div className="bg-card rounded-xl border shadow-sm p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <FilterBar>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -147,13 +220,33 @@ export default function Colaboradores() {
             />
           </div>
 
-          <Select value={filterArea} onValueChange={(v) => { setFilterArea(v); setPage(1); }}>
+          <Select value={filterDiretoria} onValueChange={(v) => { setFilterDiretoria(v); setFilterArea("all"); setFilterEspecialidade("all"); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todas as diretorias" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as diretorias</SelectItem>
+              {diretorias.map((d) => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterArea} onValueChange={(v) => { setFilterArea(v); setFilterEspecialidade("all"); setPage(1); }}>
             <SelectTrigger>
               <SelectValue placeholder="Todas as áreas" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as áreas</SelectItem>
-              {AREAS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+              {areasFiltradas.map((a) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterEspecialidade} onValueChange={(v) => { setFilterEspecialidade(v); setPage(1); }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todas as especialidades" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as especialidades</SelectItem>
+              {especialidadesFiltradas.map((e) => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -168,7 +261,7 @@ export default function Colaboradores() {
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Table */}
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -185,12 +278,9 @@ export default function Colaboradores() {
                   E-mail
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                  <button onClick={() => handleSort("area")} className="flex items-center hover:text-foreground transition-colors">
-                    Área <SortIcon field="area" />
+                  <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
+                    Área / Especialidade <SortIcon field="senioridade" />
                   </button>
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                  Subárea
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">
                   <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
@@ -212,7 +302,6 @@ export default function Colaboradores() {
                       <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
                       <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-40" /></td>
                       <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
                       <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
@@ -221,7 +310,7 @@ export default function Colaboradores() {
                 : paginated.length === 0
                 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                         Nenhum colaborador encontrado com os filtros aplicados.
                       </td>
                     </tr>
@@ -231,13 +320,23 @@ export default function Colaboradores() {
                       <td className="px-4 py-3">
                         <div>
                           <p className="font-medium text-foreground">{c.nomeCompleto}</p>
-                          <p className="text-xs text-muted-foreground md:hidden">{c.area}</p>
+                          <p className="text-xs text-muted-foreground md:hidden">
+                            {c.area_ids.length > 0
+                              ? c.area_ids.map((id) => fetchedAreas.find((a) => a.id === id)?.nome).filter(Boolean).join(", ")
+                              : "—"}
+                          </p>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.email}</td>
-                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{c.area}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.email ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                        {c.subarea || <span className="text-muted-foreground/50">—</span>}
+                        {c.area_ids.length > 0
+                          ? c.area_ids.map((id) => fetchedAreas.find((a) => a.id === id)?.nome).filter(Boolean).join(", ")
+                          : "—"}
+                        {c.especialidade_id && (
+                          <span className="text-xs text-muted-foreground/70 block">
+                            {especialidades.find((e) => e.id === c.especialidade_id)?.nome}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell">{c.senioridade}</td>
                       <td className="px-4 py-3">
@@ -247,6 +346,15 @@ export default function Colaboradores() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="Ver detalhes"
+                            onClick={() => setDetailTarget(c)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -305,6 +413,18 @@ export default function Colaboradores() {
         nome={deleteTarget?.nomeCompleto ?? ""}
         isLoading={deleteMutation.isPending}
       />
-    </div>
+
+      <ColaboradorDetailPanel
+        colaborador={detailTarget}
+        open={!!detailTarget}
+        onClose={() => setDetailTarget(null)}
+        areas={fetchedAreas}
+        especialidades={especialidades}
+        diretorias={diretorias}
+        torres={torres}
+        squads={squads}
+        contratos={contratos}
+      />
+    </PageLayout>
   );
 }

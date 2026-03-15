@@ -23,6 +23,16 @@ export const areaService = {
         return data || [];
     },
 
+    async getByDiretoria(diretoriaId: string): Promise<Area[]> {
+        const { data, error } = await supabase
+            .from("areas")
+            .select("*")
+            .eq("diretoria_id", diretoriaId)
+            .order("nome");
+        if (error) throw new Error(error.message);
+        return data || [];
+    },
+
     async create(input: AreaInput): Promise<Area> {
         const { data, error } = await supabase.from("areas").insert(input).select().single();
         if (error) throw new Error(error.message);

@@ -3,6 +3,7 @@ import { Colaborador } from "./colaborador";
 export interface Area {
     id: string;
     nome: string;
+    diretoria_id?: string | null;
     subareas_possiveis: string[];
     lideres: string[]; // UUIDs of leaders
     descricao: string;

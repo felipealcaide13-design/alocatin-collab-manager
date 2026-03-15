@@ -2,36 +2,34 @@ import { v4 as uuidv4 } from "uuid";
 import type { Colaborador, ColaboradorInput } from "@/types/colaborador";
 import { supabase } from "@/lib/supabase";
 
-// Map DB snake_case → frontend camelCase
 function fromDb(row: any): Colaborador {
   return {
     id: row.id,
     nomeCompleto: row.nome_completo,
-    email: row.email,
-    documento: row.documento,
-    cargo: row.cargo,
-    area: row.area,
-    subarea: row.subarea ?? null,
+    email: row.email ?? null,
+    documento: row.documento ?? null,
+    diretoria_id: row.diretoria_id ?? null,
+    area_ids: row.area_ids ?? [],
+    especialidade_id: row.especialidade_id ?? null,
+    squad_ids: row.squad_ids ?? [],
     senioridade: row.senioridade,
     status: row.status,
     dataAdmissao: row.data_admissao,
-    time: row.time ?? null,
   };
 }
 
-// Map frontend camelCase → DB snake_case
 function toDb(input: Partial<ColaboradorInput>): Record<string, any> {
   const mapped: Record<string, any> = {};
   if (input.nomeCompleto !== undefined) mapped.nome_completo = input.nomeCompleto;
-  if (input.email !== undefined) mapped.email = input.email;
-  if (input.documento !== undefined) mapped.documento = input.documento;
-  if (input.cargo !== undefined) mapped.cargo = input.cargo;
-  if (input.area !== undefined) mapped.area = input.area;
-  if (input.subarea !== undefined) mapped.subarea = input.subarea;
+  if (input.email !== undefined) mapped.email = input.email || null;
+  if (input.documento !== undefined) mapped.documento = input.documento || null;
+  if (input.diretoria_id !== undefined) mapped.diretoria_id = input.diretoria_id ?? null;
+  if (input.area_ids !== undefined) mapped.area_ids = input.area_ids;
+  if (input.especialidade_id !== undefined) mapped.especialidade_id = input.especialidade_id ?? null;
+  if (input.squad_ids !== undefined) mapped.squad_ids = input.squad_ids;
   if (input.senioridade !== undefined) mapped.senioridade = input.senioridade;
   if (input.status !== undefined) mapped.status = input.status;
   if (input.dataAdmissao !== undefined) mapped.data_admissao = input.dataAdmissao;
-  if (input.time !== undefined) mapped.time = input.time;
   return mapped;
 }
 
@@ -41,12 +39,10 @@ export const colaboradorService = {
       .from("colaboradores")
       .select("*")
       .order("nome_completo");
-
     if (error) {
       console.warn("Error fetching colaboradores:", error);
       return [];
     }
-
     return (data || []).map(fromDb);
   },
 
@@ -57,17 +53,17 @@ export const colaboradorService = {
   },
 
   async create(input: ColaboradorInput): Promise<Colaborador> {
-    // Check conflicts
-    const { data: extDocs } = await supabase.from("colaboradores").select("id").eq("documento", input.documento);
-    if (extDocs && extDocs.length > 0) throw new Error("CPF já cadastrado.");
-
-    const { data: extEmails } = await supabase.from("colaboradores").select("id").eq("email", input.email);
-    if (extEmails && extEmails.length > 0) throw new Error("E-mail já cadastrado.");
-
+    if (input.documento) {
+      const { data: extDocs } = await supabase.from("colaboradores").select("id").eq("documento", input.documento);
+      if (extDocs && extDocs.length > 0) throw new Error("CPF já cadastrado.");
+    }
+    if (input.email) {
+      const { data: extEmails } = await supabase.from("colaboradores").select("id").eq("email", input.email);
+      if (extEmails && extEmails.length > 0) throw new Error("E-mail já cadastrado.");
+    }
     const dbData = { id: uuidv4(), ...toDb(input) };
     const { data, error } = await supabase.from("colaboradores").insert(dbData).select().single();
     if (error) throw new Error(error.message);
-
     return fromDb(data);
   },
 

@@ -1,106 +1,134 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { StatCards } from "@/components/dashboard/StatCards";
-import { PilarChart, SenioridadeChart } from "@/components/dashboard/Charts";
-import { colaboradorService } from "@/services/colaboradorService";
+import { RefreshCw } from "lucide-react";
+import { useDashboardRH } from "@/hooks/useDashboardRH";
+import { WorkforceStatCards } from "@/components/dashboard/WorkforceStatCards";
+import { ContratoStatCards } from "@/components/dashboard/ContratoStatCards";
+import { ExpandableCard } from "@/components/dashboard/ExpandableCard";
+import { SenioridadeBarChart } from "@/components/dashboard/SenioridadeBarChart";
+import { DiretoriaPieChart } from "@/components/dashboard/DiretoriaPieChart";
+import { AreaBarChart } from "@/components/dashboard/AreaBarChart";
+import { RecentAdmissionsList } from "@/components/dashboard/RecentAdmissionsList";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { TorresList } from "@/components/dashboard/TorresList";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLayout } from "@/components/ui/page-layout";
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour <= 11) return "Bom dia";
+  if (hour >= 12 && hour <= 17) return "Boa tarde";
+  return "Boa noite";
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+      <span className="w-1 h-4 bg-[var(--primary-600)] rounded-full inline-block" />
+      {children}
+    </p>
+  );
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: colaboradores = [], isLoading } = useQuery({
-    queryKey: ["colaboradores"],
-    queryFn: () => colaboradorService.getAll(),
+  const {
+    isLoading,
+    workforceMetrics,
+    contratoMetrics,
+    senioridadeData,
+    diretoriaData,
+    areaHeadcountData,
+    torresData,
+    recentAdmissions,
+    alerts,
+  } = useDashboardRH();
+
+  const lastUpdate = new Date().toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
-  const top10 = colaboradores.slice(0, 10);
+  const lastUpdateBadge = (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 border rounded-full px-3 py-1.5">
+      <RefreshCw className="h-3 w-3" />
+      <span>Atualizado em {lastUpdate}</span>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">Visão geral dos colaboradores</p>
-        </div>
-        <Button onClick={() => navigate("/colaboradores")} className="w-fit">
-          Gerenciar Colaboradores
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+    <PageLayout title={`${getGreeting()}, RH 👋`} action={lastUpdateBadge}>
+
+      {/* Seção 1 — Força de Trabalho */}
+      <div>
+        <SectionTitle>Força de Trabalho</SectionTitle>
+        <WorkforceStatCards metrics={workforceMetrics} isLoading={isLoading} />
       </div>
 
-      {/* Stat Cards */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
-        </div>
-      ) : (
-        <StatCards colaboradores={colaboradores} />
-      )}
-
-      {/* Charts */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-72 rounded-xl" />
-          <Skeleton className="h-72 rounded-xl" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PilarChart colaboradores={colaboradores} />
-          <SenioridadeChart colaboradores={colaboradores} />
-        </div>
-      )}
-
-      {/* Top 10 Table */}
-      <div className="bg-card rounded-xl border shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h3 className="text-base font-semibold text-foreground">Colaboradores Recentes</h3>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/colaboradores")}>
-            Ver todos <ArrowRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Nome</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden md:table-cell">Área</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden lg:table-cell">Subárea</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground hidden sm:table-cell">Senioridade</th>
-                <th className="text-left px-6 py-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading
-                ? [...Array(5)].map((_, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="px-6 py-3"><Skeleton className="h-4 w-32" /></td>
-                      <td className="px-6 py-3 hidden md:table-cell"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-6 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
-                      <td className="px-6 py-3 hidden sm:table-cell"><Skeleton className="h-4 w-24" /></td>
-                      <td className="px-6 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                    </tr>
-                  ))
-                : top10.map((c) => (
-                    <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-3 font-medium">{c.nomeCompleto}</td>
-                      <td className="px-6 py-3 text-muted-foreground hidden md:table-cell">{c.area}</td>
-                      <td className="px-6 py-3 text-muted-foreground hidden lg:table-cell">
-                        {c.subarea || <span className="text-muted-foreground/50">—</span>}
-                      </td>
-                      <td className="px-6 py-3 text-muted-foreground hidden sm:table-cell">{c.senioridade}</td>
-                      <td className="px-6 py-3">
-                        <span className={c.status === "Ativo" ? "badge-active" : "badge-inactive"}>
-                          {c.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Seção 2 — Contratos */}
+      <div>
+        <SectionTitle>Contratos</SectionTitle>
+        <ContratoStatCards metrics={contratoMetrics} isLoading={isLoading} />
       </div>
-    </div>
+
+      {/* Seção 3 — Visão Operacional */}
+      <div>
+        <SectionTitle>Visão Operacional</SectionTitle>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ExpandableCard
+              title="Distribuição por Senioridade"
+              preview={<SenioridadeBarChart data={senioridadeData} collapsed={true} />}
+              full={<SenioridadeBarChart data={senioridadeData} collapsed={false} />}
+            />
+            <ExpandableCard
+              title="Distribuição por Diretoria"
+              preview={<DiretoriaPieChart data={diretoriaData} collapsed={true} />}
+              full={<DiretoriaPieChart data={diretoriaData} collapsed={false} />}
+            />
+            <ExpandableCard
+              title="Headcount por Área"
+              preview={<AreaBarChart data={areaHeadcountData} collapsed={true} />}
+              full={<AreaBarChart data={areaHeadcountData} collapsed={false} />}
+            />
+            <ExpandableCard
+              title="Admissões Recentes"
+              preview={
+                <RecentAdmissionsList
+                  admissions={recentAdmissions}
+                  collapsed={true}
+                  onViewAll={() => navigate('/colaboradores')}
+                />
+              }
+              full={
+                <RecentAdmissionsList
+                  admissions={recentAdmissions}
+                  collapsed={false}
+                  onViewAll={() => navigate('/colaboradores')}
+                />
+              }
+            />
+            <ExpandableCard
+              title="Alertas Operacionais"
+              preview={<AlertsPanel alerts={alerts} collapsed={true} />}
+              full={<AlertsPanel alerts={alerts} collapsed={false} />}
+            />
+            <ExpandableCard
+              title="Torres e Squads"
+              preview={<TorresList torres={torresData} collapsed={true} />}
+              full={<TorresList torres={torresData} collapsed={false} />}
+            />
+          </div>
+        )}
+      </div>
+    </PageLayout>
   );
 }

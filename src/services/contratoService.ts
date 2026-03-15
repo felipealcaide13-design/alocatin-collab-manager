@@ -27,8 +27,34 @@ export const contratoService = {
     },
 
     async update(id: string, input: Partial<ContratoInput>): Promise<Contrato> {
+        // Fetch previous state to diff torres
+        const { data: previous } = await supabase.from("contratos").select("torres").eq("id", id).single();
+        const prevTorres: string[] = previous?.torres ?? [];
+        const newTorres: string[] = input.torres ?? prevTorres;
+
         const { data, error } = await supabase.from("contratos").update(input).eq("id", id).select().single();
         if (error) throw new Error(error.message);
+
+        // Torres removed from contrato → detach squads that belong to those torres
+        const removedTorres = prevTorres.filter((t) => !newTorres.includes(t));
+        if (removedTorres.length > 0) {
+            await supabase
+                .from("squads")
+                .update({ contrato_id: null })
+                .eq("contrato_id", id)
+                .in("torre_id", removedTorres);
+        }
+
+        // Torres added to contrato → attach squads of those torres that have no contrato yet
+        const addedTorres = newTorres.filter((t) => !prevTorres.includes(t));
+        if (addedTorres.length > 0) {
+            await supabase
+                .from("squads")
+                .update({ contrato_id: id })
+                .in("torre_id", addedTorres)
+                .is("contrato_id", null);
+        }
+
         return data;
     },
 
@@ -39,7 +65,6 @@ export const contratoService = {
 
     async getKpis(): Promise<{ status: string; count: number }[]> {
         const { data, error } = await supabase.rpc('get_contratos_kpis');
-        // If RPC doesn't exist, fallback to fetching all and grouping
         if (error) {
             const { data: allData } = await supabase.from('contratos').select('status');
             if (!allData) return [];

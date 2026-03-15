@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,27 +17,28 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 49% 10%;
 
-    /* Primary: Corporate Blue #3B82F6 */
-    --primary: 194 98% 33%;
+    /* Primary: #3CA2C4 */
+    --primary: 195 55% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 199 45% 90%;
+    --primary-muted: 195 55% 90%;
+    --ring: 195 55% 50%;
 
-    /* Secondary: Corporate Green #10B981 */
-    --secondary: 160 84% 38%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: primary-100 background with primary-800 text */
+    --secondary: 195 55% 92%;
+    --secondary-foreground: 195 55% 22%;
 
-    --muted: 197 46%;
+    --muted: 210 16% 93%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 195 55% 92%;
+    --accent-foreground: 195 55% 22%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 195 55% 50%;
 
     --radius: 0.625rem;
 
@@ -56,11 +59,33 @@
     --status-inactive-bg: 0 84% 95%;
 
     /* Chart colors */
-    --chart-1: 217 91% 60%;
-    --chart-2: 160 84% 39%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 280 67% 60%;
-    --chart-5: 350 89% 60%;
+    --chart-1: #3CA2C4;
+    --chart-2: #267A96;
+    --chart-3: #52B8D8;
+    --chart-4: #C4603C;
+    --chart-5: #96D8E8;
+
+    /* Primary scale */
+    --primary-50: #EEF9FC;
+    --primary-100: #D9F2F8;
+    --primary-600: #3CA2C4;
+    --primary-700: #267A96;
+    --primary-800: #1A5C73;
+    --primary-900: #0D3D4F;
+
+    /* Status tokens */
+    --color-success: #16a34a;
+    --color-success-subtle: #dcfce7;
+    --color-warning: #d97706;
+    --color-warning-subtle: #fef3c7;
+    --color-danger: #dc2626;
+    --color-danger-subtle: #fee2e2;
+    --color-info: var(--primary-600);
+    --color-info-subtle: var(--primary-100);
+
+    /* Complementary */
+    --color-complementary: #C4603C;
+    --color-complementary-subtle: #F2E0D9;
   }
 }
 
@@ -109,5 +134,31 @@
   .sidebar-nav-inactive:hover {
     background-color: hsl(var(--sidebar-accent) / 0.6);
     color: hsl(var(--sidebar-accent-foreground));
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@layer utilities {
+  .interactive {
+    @apply transition-colors duration-150 ease-in-out;
   }
 }
