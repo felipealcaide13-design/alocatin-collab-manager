@@ -16,6 +16,8 @@ export interface Contrato {
     status: ContratoStatus;
     descricao: string | null;
     torres: string[] | null;
+    /** IDs de squads específicas vinculadas. Null/vazio = todas as squads das torres vinculadas. */
+    squads_ids: string[] | null;
     created_at?: string;
 }
 
@@ -29,6 +31,13 @@ export interface ContractCost {
 }
 
 export type ContratoInput = Omit<Contrato, "id" | "created_at" | "valor_total">;
+
+/** Par torre + squads selecionadas no formulário */
+export interface TorreSquadSelection {
+    torre_id: string;
+    /** IDs das squads selecionadas. Vazio = todas as squads da torre */
+    squad_ids: string[];
+}
 
 export const CONTRATO_STATUS: ContratoStatus[] = ['Ativo', 'Encerrado', 'Pausado'];
 export const CONTRACT_TYPES: ContractType[] = ['Aberto', 'Fechado'];

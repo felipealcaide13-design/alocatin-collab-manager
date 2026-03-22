@@ -23,6 +23,27 @@ export const contratoService = {
     async create(input: ContratoInput): Promise<Contrato> {
         const { data, error } = await supabase.from("contratos").insert(input).select().single();
         if (error) throw new Error(error.message);
+
+        const specificSquadIds: string[] = input.squads_ids ?? [];
+        const torreIds: string[] = input.torres ?? [];
+
+        if (torreIds.length > 0) {
+            if (specificSquadIds.length > 0) {
+                // Attach only the specific squads
+                await supabase
+                    .from("squads")
+                    .update({ contrato_id: data.id })
+                    .in("id", specificSquadIds);
+            } else {
+                // Attach all squads of the torres that have no contrato yet
+                await supabase
+                    .from("squads")
+                    .update({ contrato_id: data.id })
+                    .in("torre_id", torreIds)
+                    .is("contrato_id", null);
+            }
+        }
+
         return data;
     },
 
@@ -31,11 +52,12 @@ export const contratoService = {
         const { data: previous } = await supabase.from("contratos").select("torres").eq("id", id).single();
         const prevTorres: string[] = previous?.torres ?? [];
         const newTorres: string[] = input.torres ?? prevTorres;
+        const specificSquadIds: string[] = input.squads_ids ?? [];
 
         const { data, error } = await supabase.from("contratos").update(input).eq("id", id).select().single();
         if (error) throw new Error(error.message);
 
-        // Torres removed from contrato → detach squads that belong to those torres
+        // Torres removed from contrato → detach all squads of those torres
         const removedTorres = prevTorres.filter((t) => !newTorres.includes(t));
         if (removedTorres.length > 0) {
             await supabase
@@ -45,14 +67,33 @@ export const contratoService = {
                 .in("torre_id", removedTorres);
         }
 
-        // Torres added to contrato → attach squads of those torres that have no contrato yet
-        const addedTorres = newTorres.filter((t) => !prevTorres.includes(t));
-        if (addedTorres.length > 0) {
-            await supabase
-                .from("squads")
-                .update({ contrato_id: id })
-                .in("torre_id", addedTorres)
-                .is("contrato_id", null);
+        // For torres still/newly in contrato, sync squad assignments
+        if (newTorres.length > 0) {
+            if (specificSquadIds.length > 0) {
+                // Specific squads selected: detach squads of these torres NOT in the list
+                await supabase
+                    .from("squads")
+                    .update({ contrato_id: null })
+                    .eq("contrato_id", id)
+                    .in("torre_id", newTorres)
+                    .not("id", "in", `(${specificSquadIds.join(",")})`);
+
+                // Attach the specific squads
+                await supabase
+                    .from("squads")
+                    .update({ contrato_id: id })
+                    .in("id", specificSquadIds);
+            } else {
+                // No specific squads → attach all squads of the torres (that have no contrato yet)
+                const addedTorres = newTorres.filter((t) => !prevTorres.includes(t));
+                if (addedTorres.length > 0) {
+                    await supabase
+                        .from("squads")
+                        .update({ contrato_id: id })
+                        .in("torre_id", addedTorres)
+                        .is("contrato_id", null);
+                }
+            }
         }
 
         return data;

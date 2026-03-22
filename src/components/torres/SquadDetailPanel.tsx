@@ -7,6 +7,7 @@ import { DetailSection } from "@/components/ui/detail-section";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { type Squad, type Torre } from "@/types/torre";
 import { type Colaborador } from "@/types/colaborador";
+import { isCamadaPermitida } from "@/utils/senioridadeCamadas";
 import { type Contrato } from "@/types/contrato";
 import { type Area } from "@/types/area";
 import { type Especialidade } from "@/types/especialidade";
@@ -39,9 +40,10 @@ export function SquadDetailPanel({
     const contrato = squad.contrato_id ? contratos.find((c) => c.id === squad.contrato_id) : null;
     const lider = squad.lider ? colaboradores.find((c) => c.id === squad.lider) : null;
 
-    const membros = (squad.membros ?? [])
-      .map((id) => colaboradores.find((c) => c.id === id))
-      .filter(Boolean) as Colaborador[];
+    // Fonte da verdade: colaborador.squad_ids
+    const membros = colaboradores.filter(
+      (c) => (c.squad_ids ?? []).includes(squad.id) && isCamadaPermitida(c.senioridade, "Squad")
+    );
 
     const bySenioridade = new Map<string, number>();
     membros.forEach((m) => {

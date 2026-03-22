@@ -145,7 +145,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Business Unit</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Selecione a BU" /></SelectTrigger>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhuma</SelectItem>
@@ -165,7 +165,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Responsável pelo Negócio</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
@@ -184,7 +184,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Head de Tecnologia</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
@@ -203,7 +203,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Head de Produto</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
@@ -222,7 +222,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Gerente de Produto</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>
@@ -241,7 +241,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                                     <FormLabel>Gerente de Design</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                                         <FormControl>
-                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue placeholder="Selecione o Colaborador" /></SelectTrigger>
+                                            <SelectTrigger disabled={colaboradoresLoading || areasLoading}><SelectValue /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             <SelectItem value="none">Nenhum</SelectItem>

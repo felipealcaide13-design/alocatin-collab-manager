@@ -12,6 +12,9 @@ function fromDb(row: any): Colaborador {
     area_ids: row.area_ids ?? [],
     especialidade_id: row.especialidade_id ?? null,
     squad_ids: row.squad_ids ?? [],
+    torre_ids: row.torre_ids ?? [],
+    bu_id: row.bu_id ?? null,
+    lider_id: row.lider_id ?? null,
     senioridade: row.senioridade,
     status: row.status,
     dataAdmissao: row.data_admissao,
@@ -27,6 +30,9 @@ function toDb(input: Partial<ColaboradorInput>): Record<string, any> {
   if (input.area_ids !== undefined) mapped.area_ids = input.area_ids;
   if (input.especialidade_id !== undefined) mapped.especialidade_id = input.especialidade_id ?? null;
   if (input.squad_ids !== undefined) mapped.squad_ids = input.squad_ids;
+  if (input.torre_ids !== undefined) mapped.torre_ids = input.torre_ids;
+  if ("bu_id" in input) mapped.bu_id = input.bu_id ?? null;
+  if ("lider_id" in input) mapped.lider_id = input.lider_id ?? null;
   if (input.senioridade !== undefined) mapped.senioridade = input.senioridade;
   if (input.status !== undefined) mapped.status = input.status;
   if (input.dataAdmissao !== undefined) mapped.data_admissao = input.dataAdmissao;
@@ -81,5 +87,30 @@ export const colaboradorService = {
   async remove(id: string): Promise<void> {
     const { error } = await supabase.from("colaboradores").delete().eq("id", id);
     if (error) throw new Error(error.message);
+  },
+
+  /**
+   * Sincroniza membros de uma squad: garante que os colaboradores em `newMemberIds`
+   * tenham o squadId em seus squad_ids, e os que saíram tenham removido.
+   */
+  async syncSquadMembers(squadId: string, oldMemberIds: string[], newMemberIds: string[]): Promise<void> {
+    const removed = oldMemberIds.filter((id) => !newMemberIds.includes(id));
+    const added = newMemberIds.filter((id) => !oldMemberIds.includes(id));
+
+    for (const colaboradorId of removed) {
+      const colab = await colaboradorService.getById(colaboradorId);
+      if (!colab) continue;
+      const updated = (colab.squad_ids ?? []).filter((sid) => sid !== squadId);
+      await colaboradorService.update(colaboradorId, { squad_ids: updated });
+    }
+
+    for (const colaboradorId of added) {
+      const colab = await colaboradorService.getById(colaboradorId);
+      if (!colab) continue;
+      const current = colab.squad_ids ?? [];
+      if (!current.includes(squadId)) {
+        await colaboradorService.update(colaboradorId, { squad_ids: [...current, squadId] });
+      }
+    }
   },
 };

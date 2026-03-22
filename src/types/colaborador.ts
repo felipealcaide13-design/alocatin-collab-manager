@@ -20,7 +20,10 @@ export interface Colaborador {
   diretoria_id?: string | null;   // FK → diretorias.id
   area_ids: string[];             // FK[] → areas.id (1..N dependendo da senioridade)
   especialidade_id?: string | null; // FK → especialidades.id (apenas ICs)
+  torre_ids: string[];            // FK[] → torres.id (multi-torre)
   squad_ids: string[];            // FK[] → squads.id (opcional, exceto C-level/Diretor)
+  bu_id?: string | null;          // FK → business_units.id (C-level/Diretor)
+  lider_id?: string | null;       // FK → colaboradores.id (líder direto)
   senioridade: Senioridade;
   status: Status;
   dataAdmissao: string;

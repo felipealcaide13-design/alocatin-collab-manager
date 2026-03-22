@@ -5,7 +5,7 @@ export const diretoriaService = {
   async getAll(): Promise<Diretoria[]> {
     const { data, error } = await supabase.from("diretorias").select("*").order("nome");
     if (error) throw new Error(error.message);
-    return data || [];
+    return (data || []).map((d) => ({ ...d, lideres: d.lideres ?? [] }));
   },
 
   async getById(id: string): Promise<Diretoria | null> {
@@ -18,7 +18,7 @@ export const diretoriaService = {
   },
 
   async create(input: DiretoriaInput): Promise<Diretoria> {
-    const { data, error } = await supabase.from("diretorias").insert(input).select().single();
+    const { data, error } = await supabase.from("diretorias").insert({ ...input, lideres: input.lideres ?? [] }).select().single();
     if (error) throw new Error(error.message);
     return data;
   },

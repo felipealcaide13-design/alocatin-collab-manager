@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
 
@@ -84,6 +85,8 @@ export default function BusinessUnits() {
 
     // Squads state
     const [searchSquad, setSearchSquad] = useState("");
+    const [filterSquadTorre, setFilterSquadTorre] = useState("all");
+    const [filterSquadContrato, setFilterSquadContrato] = useState("all");
     const [pageSquad, setPageSquad] = useState(1);
     const [squadFormOpen, setSquadFormOpen] = useState(false);
     const [editSquadTarget, setEditSquadTarget] = useState<Squad | null>(null);
@@ -208,7 +211,9 @@ export default function BusinessUnits() {
     const createSquadMutation = useMutation({
         mutationFn: (data: any) => torreService.createSquad(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["squads", "torres", "contratos"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["torres"] });
+            queryClient.invalidateQueries({ queryKey: ["contratos"] });
             setSquadFormOpen(false);
             toast({ title: "Squad cadastrado!", description: "Novo squad adicionado com sucesso." });
         },
@@ -218,7 +223,9 @@ export default function BusinessUnits() {
     const updateSquadMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: any }) => torreService.updateSquad(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["squads", "torres", "contratos"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["torres"] });
+            queryClient.invalidateQueries({ queryKey: ["contratos"] });
             setSquadFormOpen(false);
             setEditSquadTarget(null);
             toast({ title: "Squad atualizado!", description: "Dados salvos com sucesso." });
@@ -266,7 +273,12 @@ export default function BusinessUnits() {
     }, [torres, searchTorre, sortTorre, businessUnits]);
 
     const filteredSquads = useMemo(() => {
-        const list = squads.filter((s) => !searchSquad || s.nome.toLowerCase().includes(searchSquad.toLowerCase()));
+        const list = squads.filter((s) => {
+            if (searchSquad && !s.nome.toLowerCase().includes(searchSquad.toLowerCase())) return false;
+            if (filterSquadTorre !== "all" && s.torre_id !== filterSquadTorre) return false;
+            if (filterSquadContrato !== "all" && (s as any).contrato_id !== filterSquadContrato) return false;
+            return true;
+        });
         if (!sortSquad) return list.sort((a, b) => a.nome.localeCompare(b.nome));
         return [...list].sort((a, b) => {
             let av: any, bv: any;
@@ -277,8 +289,8 @@ export default function BusinessUnits() {
                 av = (a as any).contratos?.nome ?? "";
                 bv = (b as any).contratos?.nome ?? "";
             } else if (sortSquad.key === "membros") {
-                av = a.membros?.length ?? 0;
-                bv = b.membros?.length ?? 0;
+                av = colaboradores.filter(c => (c.squad_ids ?? []).includes(a.id)).length;
+                bv = colaboradores.filter(c => (c.squad_ids ?? []).includes(b.id)).length;
             } else {
                 av = (a as any)[sortSquad.key] ?? "";
                 bv = (b as any)[sortSquad.key] ?? "";
@@ -286,7 +298,7 @@ export default function BusinessUnits() {
             const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
             return sortSquad.dir === "asc" ? cmp : -cmp;
         });
-    }, [squads, searchSquad, sortSquad, torres]);
+    }, [squads, searchSquad, filterSquadTorre, filterSquadContrato, sortSquad, torres]);
 
     const paginatedTorres = filteredTorres.slice((pageTorre - 1) * PAGE_SIZE, pageTorre * PAGE_SIZE);
     const paginatedSquads = filteredSquads.slice((pageSquad - 1) * PAGE_SIZE, pageSquad * PAGE_SIZE);
@@ -316,6 +328,7 @@ export default function BusinessUnits() {
                         businessUnits={businessUnits}
                         torres={torres}
                         squads={squads}
+                        colaboradores={colaboradores}
                         isLoading={loadingBUs || loadingTorres || loadingSquads}
                         layout={chartLayout}
                         onLayoutChange={setChartLayout}
@@ -434,6 +447,7 @@ export default function BusinessUnits() {
                                                 Squads<SortIcon col="squads_count" sort={sortTorre} />
                                             </button>
                                         </th>
+                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Contratos</th>
                                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
                                     </tr>
                                 </thead>
@@ -444,21 +458,30 @@ export default function BusinessUnits() {
                                                 <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
                                                 <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
                                                 <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></td>
+                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-32" /></td>
                                                 <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
                                             </tr>
                                         ))
                                     ) : paginatedTorres.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">Nenhuma torre encontrada.</td>
+                                            <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">Nenhuma torre encontrada.</td>
                                         </tr>
                                     ) : (
-                                        paginatedTorres.map((t) => (
+                                        paginatedTorres.map((t) => {
+                                            const torreSquads = squads.filter(s => s.torre_id === t.id);
+                                            const torreContratos = [...new Set(torreSquads.map(s => s.contrato_id).filter(Boolean))]
+                                                .map(cid => contratos.find(c => c.id === cid)?.nome)
+                                                .filter(Boolean);
+                                            return (
                                             <tr key={t.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                                                 <td className="px-4 py-3 font-medium text-foreground">{t.nome}</td>
                                                 <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                                                     {businessUnits.find(b => b.id === t.bu_id)?.nome ?? "—"}
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{t.squads_count}</td>
+                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                                                    {torreContratos.length > 0 ? torreContratos.join(", ") : "—"}
+                                                </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailTorre(t)}>
@@ -473,7 +496,8 @@ export default function BusinessUnits() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>
@@ -484,10 +508,34 @@ export default function BusinessUnits() {
                 {/* SQUADS TAB */}
                 <TabsContent value="squads" className="space-y-4 outline-none">
                     <FilterBar className="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Buscar squads..." value={searchSquad}
-                                onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }} className="pl-9" />
+                        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                            <div className="relative w-full max-w-sm">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Buscar squads..." value={searchSquad}
+                                    onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }} className="pl-9" />
+                            </div>
+                            <Select value={filterSquadTorre} onValueChange={(v) => { setFilterSquadTorre(v); setPageSquad(1); }}>
+                                <SelectTrigger className="w-full sm:w-44">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as Torres</SelectItem>
+                                    {torres.map((t) => (
+                                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filterSquadContrato} onValueChange={(v) => { setFilterSquadContrato(v); setPageSquad(1); }}>
+                                <SelectTrigger className="w-full sm:w-44">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Contratos</SelectItem>
+                                    {contratos.map((c) => (
+                                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <Button onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
                             <Plus className="mr-2 h-4 w-4" /> Nova Squad
@@ -543,7 +591,7 @@ export default function BusinessUnits() {
                                                 <td className="px-4 py-3 font-medium text-foreground">{s.nome}</td>
                                                 <td className="px-4 py-3 text-muted-foreground">{torres.find(t => t.id === s.torre_id)?.nome || "—"}</td>
                                                 <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{(s as any).contratos?.nome || "—"}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{s.membros?.length || 0}</td>
+                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{colaboradores.filter(c => (c.squad_ids ?? []).includes(s.id)).length}</td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailSquad(s)}>
@@ -593,6 +641,7 @@ export default function BusinessUnits() {
                 onClose={() => setDetailBU(null)}
                 torres={torres}
                 squads={squads}
+                colaboradores={colaboradores}
             />
 
             {/* Torre modals */}
@@ -631,8 +680,17 @@ export default function BusinessUnits() {
                 open={squadFormOpen}
                 onClose={() => { setSquadFormOpen(false); setEditSquadTarget(null); }}
                 onSubmit={async (values) => {
-                    if (editSquadTarget) await updateSquadMutation.mutateAsync({ id: editSquadTarget.id, data: values });
-                    else await createSquadMutation.mutateAsync(values);
+                    if (editSquadTarget) {
+                        // Calcula membros anteriores (fonte da verdade: colaboradores)
+                        const oldMemberIds = colaboradores
+                            .filter((c) => (c.squad_ids ?? []).includes(editSquadTarget.id))
+                            .map((c) => c.id);
+                        await updateSquadMutation.mutateAsync({ id: editSquadTarget.id, data: values });
+                        await colaboradorService.syncSquadMembers(editSquadTarget.id, oldMemberIds, values.membros ?? []);
+                        queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
+                    } else {
+                        await createSquadMutation.mutateAsync(values);
+                    }
                 }}
                 initialData={editSquadTarget}
                 isLoading={createSquadMutation.isPending || updateSquadMutation.isPending}

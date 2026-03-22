@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import {
-  User, Mail, FileText, Calendar, Building2, Layers, Network, ChevronRight, Briefcase,
+  User, Mail, FileText, Calendar, Building2, Layers, Network, ChevronRight, Briefcase, UserCheck,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { type Especialidade } from "@/types/especialidade";
 import { type Diretoria } from "@/types/diretoria";
 import { type Torre, type Squad } from "@/types/torre";
 import { type Contrato } from "@/types/contrato";
+import { type BusinessUnit } from "@/types/businessUnit";
 
 interface Props {
   colaborador: Colaborador | null;
@@ -24,6 +25,8 @@ interface Props {
   torres: Torre[];
   squads: Squad[];
   contratos: Contrato[];
+  businessUnits: BusinessUnit[];
+  colaboradores?: Colaborador[];
 }
 
 export function ColaboradorDetailPanel({
@@ -36,11 +39,14 @@ export function ColaboradorDetailPanel({
   torres,
   squads,
   contratos,
+  businessUnits,
+  colaboradores = [],
 }: Props) {
   const data = useMemo(() => {
     if (!colaborador) return null;
 
     const diretoria = diretorias.find((d) => d.id === colaborador.diretoria_id);
+    const lider = colaborador.lider_id ? colaboradores.find((c) => c.id === colaborador.lider_id) : null;
     const colabAreas = areas.filter((a) => colaborador.area_ids.includes(a.id));
     const especialidade = especialidades.find((e) => e.id === colaborador.especialidade_id);
 
@@ -51,7 +57,8 @@ export function ColaboradorDetailPanel({
     const squadDetails = colabSquads.map((sq) => {
       const torre = torres.find((t) => t.id === sq.torre_id);
       const contrato = sq.contrato_id ? contratos.find((c) => c.id === sq.contrato_id) : null;
-      return { squad: sq, torre, contrato };
+      const bu = torre?.bu_id ? businessUnits.find((b) => b.id === torre.bu_id) : null;
+      return { squad: sq, torre, contrato, bu };
     });
 
     const uniqueContratos = Array.from(
@@ -62,12 +69,12 @@ export function ColaboradorDetailPanel({
       ).values()
     );
 
-    return { diretoria, colabAreas, especialidade, squadDetails, uniqueContratos };
-  }, [colaborador, diretorias, areas, especialidades, squads, torres, contratos]);
+    return { diretoria, lider, colabAreas, especialidade, squadDetails, uniqueContratos };
+  }, [colaborador, diretorias, areas, especialidades, squads, torres, contratos, businessUnits]);
 
   if (!colaborador || !data) return null;
 
-  const { diretoria, colabAreas, especialidade, squadDetails, uniqueContratos } = data;
+  const { diretoria, lider, colabAreas, especialidade, squadDetails, uniqueContratos } = data;
 
   const initials = colaborador.nomeCompleto
     .split(" ")
@@ -110,6 +117,11 @@ export function ColaboradorDetailPanel({
               value={new Date(colaborador.dataAdmissao + "T00:00:00").toLocaleDateString("pt-BR")}
             />
             <DetailRow icon={Building2} label="Diretoria" value={diretoria?.nome} />
+            <DetailRow
+              icon={UserCheck}
+              label="Líder direto"
+              value={lider ? `${lider.nomeCompleto} (${lider.senioridade})` : undefined}
+            />
           </div>
         </DetailSection>
 
@@ -143,9 +155,15 @@ export function ColaboradorDetailPanel({
             <p className="text-sm text-muted-foreground">Não alocado em nenhuma squad.</p>
           ) : (
             <div className="space-y-1.5">
-              {squadDetails.map(({ squad, torre, contrato }) => (
+              {squadDetails.map(({ squad, torre, contrato, bu }) => (
                 <div key={squad.id} className="rounded-lg border px-3 py-2 bg-muted/20 space-y-1">
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    {bu && (
+                      <>
+                        <span className="text-muted-foreground shrink-0">{bu.nome}</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                      </>
+                    )}
                     <span className="text-muted-foreground shrink-0">{torre?.nome ?? "—"}</span>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     <span className="font-medium text-foreground">{squad.nome}</span>

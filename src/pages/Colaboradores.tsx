@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
@@ -14,14 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ColaboradorForm } from "@/components/colaboradores/ColaboradorForm";
-import { ColaboradorDetailPanel } from "@/components/colaboradores/ColaboradorDetailPanel";
-import { DeleteConfirmDialog } from "@/components/colaboradores/DeleteConfirmDialog";
 import { colaboradorService } from "@/services/colaboradorService";
 import { areaService } from "@/services/areaService";
 import { especialidadeService } from "@/services/especialidadeService";
 import { diretoriaService } from "@/services/diretoriaService";
-import { torreService } from "@/services/torreService";
-import { contratoService } from "@/services/contratoService";
 import { type Colaborador } from "@/types/colaborador";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,6 +25,7 @@ type SortField = "nomeCompleto" | "status" | "senioridade";
 type SortDir = "asc" | "desc";
 
 export default function Colaboradores() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,28 +40,24 @@ export default function Colaboradores() {
   const PAGE_SIZE = 10;
 
   const [searchParams, setSearchParams] = useSearchParams();
-
   const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Colaborador | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Colaborador | null>(null);
-  const [detailTarget, setDetailTarget] = useState<Colaborador | null>(null);
 
   const { data: colaboradores = [], isLoading } = useQuery({
     queryKey: ["colaboradores"],
     queryFn: () => colaboradorService.getAll(),
   });
 
-  // Open detail panel when navigated from global search
+  // Navigate to detail page when coming from global search
   useEffect(() => {
     const openId = searchParams.get("openId");
     if (openId && colaboradores.length > 0) {
       const found = colaboradores.find((c) => c.id === openId);
       if (found) {
-        setDetailTarget(found);
         setSearchParams({}, { replace: true });
+        navigate(`/colaboradores/${found.id}`);
       }
     }
-  }, [colaboradores, searchParams]);
+  }, [colaboradores, searchParams, navigate, setSearchParams]);
 
   const { data: fetchedAreas = [] } = useQuery({
     queryKey: ["areas"],
@@ -81,51 +74,16 @@ export default function Colaboradores() {
     queryFn: () => diretoriaService.getAll().catch(() => []),
   });
 
-  const { data: torres = [] } = useQuery({
-    queryKey: ["torres"],
-    queryFn: () => torreService.getAllTorres().catch(() => []),
-  });
-
-  const { data: squads = [] } = useQuery({
-    queryKey: ["squads"],
-    queryFn: () => torreService.getAllSquads().catch(() => []),
-  });
-
-  const { data: contratos = [] } = useQuery({
-    queryKey: ["contratos"],
-    queryFn: () => contratoService.getAll().catch(() => []),
-  });
-
   const createMutation = useMutation({
     mutationFn: (data: Omit<Colaborador, "id">) => colaboradorService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
+      queryClient.invalidateQueries({ queryKey: ["squads"] });
+      queryClient.invalidateQueries({ queryKey: ["torres"] });
       setFormOpen(false);
       toast({ title: "Colaborador cadastrado!", description: "Novo colaborador adicionado com sucesso." });
     },
     onError: (e: Error) => toast({ title: "Erro ao cadastrar", description: e.message, variant: "destructive" }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Colaborador, "id">> }) =>
-      colaboradorService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
-      setFormOpen(false);
-      setEditTarget(null);
-      toast({ title: "Colaborador atualizado!", description: "Dados salvos com sucesso." });
-    },
-    onError: (e: Error) => toast({ title: "Erro ao atualizar", description: e.message, variant: "destructive" }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => colaboradorService.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
-      setDeleteTarget(null);
-      toast({ title: "Colaborador excluído", description: "O registro foi removido." });
-    },
-    onError: (e: Error) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
   });
 
   // Áreas filtradas pela diretoria selecionada
@@ -137,7 +95,6 @@ export default function Colaboradores() {
   // Especialidades filtradas pela área selecionada
   const especialidadesFiltradas = useMemo(() => {
     if (filterArea === "all") {
-      // Se só tem diretoria selecionada, filtra especialidades pelas áreas dessa diretoria
       if (filterDiretoria !== "all") {
         const areaIds = areasFiltradas.map((a) => a.id);
         return especialidades.filter((e) => areaIds.includes(e.area_id));
@@ -188,20 +145,12 @@ export default function Colaboradores() {
       : <ChevronDown className="ml-1 h-3 w-3" />;
   };
 
-  const handleFormSubmit = async (values: Omit<Colaborador, "id">) => {
-    if (editTarget) {
-      await updateMutation.mutateAsync({ id: editTarget.id, data: values });
-    } else {
-      await createMutation.mutateAsync(values);
-    }
-  };
-
   return (
     <PageLayout
       title="Colaboradores"
       subtitle={isLoading ? "Carregando..." : `${filtered.length} colaborador(es) encontrado(s)`}
       action={
-        <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
+        <Button onClick={() => setFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Colaborador
         </Button>
@@ -275,12 +224,10 @@ export default function Colaboradores() {
                   </button>
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
-                  E-mail
+                  Diretoria
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                  <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
-                    Área / Especialidade <SortIcon field="senioridade" />
-                  </button>
+                  Área / Especialidade
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">
                   <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
@@ -304,7 +251,7 @@ export default function Colaboradores() {
                       <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                      <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                      <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-10 ml-auto" /></td>
                     </tr>
                   ))
                 : paginated.length === 0
@@ -327,7 +274,9 @@ export default function Colaboradores() {
                           </p>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.email ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                        {c.diretoria_id ? (diretorias.find((d) => d.id === c.diretoria_id)?.nome ?? "—") : "—"}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                         {c.area_ids.length > 0
                           ? c.area_ids.map((id) => fetchedAreas.find((a) => a.id === id)?.nome).filter(Boolean).join(", ")
@@ -345,33 +294,15 @@ export default function Colaboradores() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            title="Ver detalhes"
-                            onClick={() => setDetailTarget(c)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => { setEditTarget(c); setFormOpen(true); }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => setDeleteTarget(c)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          title="Ver detalhes"
+                          onClick={() => navigate(`/colaboradores/${c.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -397,33 +328,13 @@ export default function Colaboradores() {
         )}
       </div>
 
-      {/* Modals */}
+      {/* New colaborador form */}
       <ColaboradorForm
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditTarget(null); }}
-        onSubmit={handleFormSubmit}
-        initialData={editTarget}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-      />
-
-      <DeleteConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        nome={deleteTarget?.nomeCompleto ?? ""}
-        isLoading={deleteMutation.isPending}
-      />
-
-      <ColaboradorDetailPanel
-        colaborador={detailTarget}
-        open={!!detailTarget}
-        onClose={() => setDetailTarget(null)}
-        areas={fetchedAreas}
-        especialidades={especialidades}
-        diretorias={diretorias}
-        torres={torres}
-        squads={squads}
-        contratos={contratos}
+        onClose={() => setFormOpen(false)}
+        onSubmit={async (values) => { await createMutation.mutateAsync(values as Omit<Colaborador, "id">); }}
+        initialData={null}
+        isLoading={createMutation.isPending}
       />
     </PageLayout>
   );

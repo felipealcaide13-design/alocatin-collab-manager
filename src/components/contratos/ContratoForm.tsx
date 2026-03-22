@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { torreService } from "@/services/torreService";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,9 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CONTRATO_STATUS, CONTRACT_TYPES, type Contrato, type ContractType } from "@/types/contrato";
+import { Badge } from "@/components/ui/badge";
+import { CONTRATO_STATUS, CONTRACT_TYPES, type Contrato, type TorreSquadSelection } from "@/types/contrato";
+import type { Torre, Squad } from "@/types/torre";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
@@ -58,6 +60,7 @@ const schema = z.object({
     status: z.enum(["Ativo", "Encerrado", "Pausado"]),
     descricao: z.string().nullable().optional(),
     torres: z.array(z.string()).default([]),
+    squads_ids: z.array(z.string()).default([]),
 }).superRefine((data, ctx) => {
     if (data.contract_type === "Fechado" && !data.data_fim) {
         ctx.addIssue({
@@ -83,6 +86,133 @@ const formatarMilhares = (digits: string): string => {
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
+// ─── Torre+Squad row component ───────────────────────────────────────────────
+
+interface TorreRowProps {
+    torres: Torre[];
+    usedTorreIds: string[];
+    selection: TorreSquadSelection;
+    onChange: (sel: TorreSquadSelection) => void;
+    onRemove: () => void;
+}
+
+function TorreRow({ torres, usedTorreIds, selection, onChange, onRemove }: TorreRowProps) {
+    const torre = torres.find((t) => t.id === selection.torre_id);
+    const squads: Squad[] = torre?.squads ?? [];
+
+    const availableTorres = torres.filter(
+        (t) => t.id === selection.torre_id || !usedTorreIds.includes(t.id)
+    );
+
+    const handleTorreChange = (torreId: string) => {
+        onChange({ torre_id: torreId, squad_ids: [] });
+    };
+
+    const toggleSquad = (squadId: string) => {
+        const current = selection.squad_ids;
+        const next = current.includes(squadId)
+            ? current.filter((id) => id !== squadId)
+            : [...current, squadId];
+        onChange({ ...selection, squad_ids: next });
+    };
+
+    const squadLabel = () => {
+        if (!torre) return "Selecionar squads...";
+        if (selection.squad_ids.length === 0) return "Todas as squads";
+        return squads
+            .filter((s) => selection.squad_ids.includes(s.id))
+            .map((s) => s.nome)
+            .join(", ");
+    };
+
+    return (
+        <div className="flex items-start gap-2 rounded-lg border bg-muted/10 p-3">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Torre select */}
+                <Select value={selection.torre_id} onValueChange={handleTorreChange}>
+                    <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecionar torre..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableTorres.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                {/* Squad multi-select */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            type="button"
+                            disabled={!torre}
+                            className={cn(
+                                "h-9 w-full justify-between font-normal text-left",
+                                !torre && "opacity-50 cursor-not-allowed"
+                            )}
+                        >
+                            <span className="truncate text-sm">
+                                {selection.squad_ids.length === 0
+                                    ? <span className="text-muted-foreground">Todas as squads</span>
+                                    : squadLabel()}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0" align="start">
+                        <ScrollArea className="max-h-52">
+                            {squads.length === 0 ? (
+                                <p className="px-4 py-3 text-sm text-muted-foreground">
+                                    Nenhuma squad nesta torre.
+                                </p>
+                            ) : (
+                                <>
+                                    <p className="px-3 py-2 text-xs text-muted-foreground border-b">
+                                        Deixe vazio para incluir todas
+                                    </p>
+                                    {squads.map((squad) => {
+                                        const selected = selection.squad_ids.includes(squad.id);
+                                        return (
+                                            <button
+                                                key={squad.id}
+                                                type="button"
+                                                onClick={() => toggleSquad(squad.id)}
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "h-4 w-4 shrink-0",
+                                                        selected ? "opacity-100 text-primary" : "opacity-0"
+                                                    )}
+                                                />
+                                                {squad.nome}
+                                            </button>
+                                        );
+                                    })}
+                                </>
+                            )}
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={onRemove}
+            >
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        </div>
+    );
+}
+
+// ─── Main form ────────────────────────────────────────────────────────────────
+
 export function ContratoForm({
     open,
     onClose,
@@ -92,6 +222,7 @@ export function ContratoForm({
 }: ContratoFormProps) {
     const isEdit = !!initialData;
     const [displayValor, setDisplayValor] = useState("");
+    const [torreSelections, setTorreSelections] = useState<TorreSquadSelection[]>([]);
 
     const { data: torres = [] } = useQuery({
         queryKey: ["torres"],
@@ -110,10 +241,23 @@ export function ContratoForm({
             status: "Ativo",
             descricao: "",
             torres: [],
+            squads_ids: [],
         },
     });
 
     const contractType = form.watch("contract_type");
+
+    // Build TorreSquadSelection[] from initialData
+    const buildSelectionsFromInitial = (data: Contrato, allTorres: Torre[]): TorreSquadSelection[] => {
+        const torreIds = data.torres ?? [];
+        const squadIds = data.squads_ids ?? [];
+        return torreIds.map((torreId) => {
+            const torre = allTorres.find((t) => t.id === torreId);
+            const torresSquadIds = (torre?.squads ?? []).map((s) => s.id);
+            const selectedSquads = squadIds.filter((id) => torresSquadIds.includes(id));
+            return { torre_id: torreId, squad_ids: selectedSquads };
+        });
+    };
 
     useEffect(() => {
         if (open) {
@@ -128,13 +272,11 @@ export function ContratoForm({
                     status: initialData.status,
                     descricao: initialData.descricao || "",
                     torres: initialData.torres || [],
+                    squads_ids: initialData.squads_ids || [],
                 });
                 const v = initialData.valor ?? initialData.valor_total;
-                if (v != null) {
-                    setDisplayValor(formatarMilhares(String(v)));
-                } else {
-                    setDisplayValor("");
-                }
+                setDisplayValor(v != null ? formatarMilhares(String(v)) : "");
+                setTorreSelections(buildSelectionsFromInitial(initialData, torres));
             } else {
                 form.reset({
                     nome: "",
@@ -146,11 +288,37 @@ export function ContratoForm({
                     status: "Ativo",
                     descricao: "",
                     torres: [],
+                    squads_ids: [],
                 });
                 setDisplayValor("");
+                setTorreSelections([]);
             }
         }
-    }, [open, initialData, form]);
+    }, [open, initialData, torres, form]);
+
+    // Sync torreSelections → form fields
+    useEffect(() => {
+        const torreIds = torreSelections.map((s) => s.torre_id).filter(Boolean);
+        const squadIds = torreSelections.flatMap((s) => s.squad_ids);
+        form.setValue("torres", torreIds);
+        form.setValue("squads_ids", squadIds);
+    }, [torreSelections, form]);
+
+    const usedTorreIds = torreSelections.map((s) => s.torre_id);
+
+    const addTorreRow = () => {
+        const available = torres.find((t) => !usedTorreIds.includes(t.id));
+        if (!available) return;
+        setTorreSelections((prev) => [...prev, { torre_id: available.id, squad_ids: [] }]);
+    };
+
+    const updateTorreRow = (index: number, sel: TorreSquadSelection) => {
+        setTorreSelections((prev) => prev.map((s, i) => (i === index ? sel : s)));
+    };
+
+    const removeTorreRow = (index: number) => {
+        setTorreSelections((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleValorChange = (
         e: React.ChangeEvent<HTMLInputElement>,
@@ -216,7 +384,7 @@ export function ContratoForm({
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione" />
+                                                    <SelectValue />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -294,7 +462,7 @@ export function ContratoForm({
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione" />
+                                                    <SelectValue />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -324,76 +492,49 @@ export function ContratoForm({
                                     </FormItem>
                                 )}
                             />
+                        </div>
 
-                            {/* Torres */}
-                            <FormField
-                                control={form.control}
-                                name="torres"
-                                render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
-                                        <FormLabel>Torres</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className={cn(
-                                                            "w-full justify-between font-normal",
-                                                            !field.value?.length && "text-muted-foreground"
-                                                        )}
-                                                    >
-                                                        {field.value?.length
-                                                            ? torres
-                                                                .filter((t) => field.value.includes(t.id))
-                                                                .map((t) => t.nome)
-                                                                .join(", ")
-                                                            : "Selecionar torres..."}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-full p-0" align="start">
-                                                <ScrollArea className="max-h-60">
-                                                    {torres.length === 0 ? (
-                                                        <p className="px-4 py-3 text-sm text-muted-foreground">
-                                                            Nenhuma torre cadastrada.
-                                                        </p>
-                                                    ) : (
-                                                        torres.map((torre) => {
-                                                            const selected = field.value?.includes(torre.id);
-                                                            return (
-                                                                <button
-                                                                    key={torre.id}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const current = field.value ?? [];
-                                                                        field.onChange(
-                                                                            selected
-                                                                                ? current.filter((id) => id !== torre.id)
-                                                                                : [...current, torre.id]
-                                                                        );
-                                                                    }}
-                                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "h-4 w-4 shrink-0",
-                                                                            selected ? "opacity-100 text-primary" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {torre.nome}
-                                                                </button>
-                                                            );
-                                                        })
-                                                    )}
-                                                </ScrollArea>
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* Torres + Squads */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <FormLabel className="text-sm font-medium">Torres e Squads</FormLabel>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addTorreRow}
+                                    disabled={usedTorreIds.length >= torres.length || torres.length === 0}
+                                    className="h-8 text-xs"
+                                >
+                                    <Plus className="h-3.5 w-3.5 mr-1" />
+                                    Adicionar Torre
+                                </Button>
+                            </div>
+
+                            {torreSelections.length === 0 ? (
+                                <p className="text-sm text-muted-foreground rounded-lg border border-dashed px-4 py-3 text-center">
+                                    Nenhuma torre vinculada. Clique em "Adicionar Torre" para associar.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {torreSelections.map((sel, idx) => (
+                                        <TorreRow
+                                            key={idx}
+                                            torres={torres}
+                                            usedTorreIds={usedTorreIds}
+                                            selection={sel}
+                                            onChange={(updated) => updateTorreRow(idx, updated)}
+                                            onRemove={() => removeTorreRow(idx)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {torreSelections.length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    Deixe o campo de squads vazio para incluir todas as squads da torre no contrato.
+                                </p>
+                            )}
                         </div>
 
                         <DialogFooter className="gap-2 mt-4">

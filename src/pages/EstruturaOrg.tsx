@@ -286,19 +286,6 @@ export default function EstruturaOrg() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-3 shrink-0 flex-wrap">
-        {SENIORITY_ORDER.map((s) => {
-          const c = SENIORITY_COLORS[s];
-          return (
-            <div key={s} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ background: c.bg, border: `1.5px solid ${c.border}` }} />
-              <span className="text-xs text-muted-foreground">{s}</span>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Chart */}
       <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden relative">
         {isLoading ? (

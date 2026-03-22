@@ -23,9 +23,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LideresAutocomplete } from "@/components/ui/lideres-autocomplete";
 import { supabase } from "@/lib/supabase";
 import { type Area } from "@/types/area";
 import { type Especialidade } from "@/types/especialidade";
@@ -46,6 +45,8 @@ interface AreaFormProps {
     onClose: () => void;
     onSubmit: (values: AreaFormValues) => Promise<void>;
     initialData?: Area | null;
+    /** Pré-seleciona a diretoria ao criar nova área */
+    defaultDiretoriaId?: string;
     /** Especialidades já cadastradas para esta área (usado na edição) */
     existingEspecialidades?: Especialidade[];
     isLoading?: boolean;
@@ -56,10 +57,12 @@ export function AreaForm({
     onClose,
     onSubmit,
     initialData,
+    defaultDiretoriaId,
     existingEspecialidades = [],
     isLoading,
 }: AreaFormProps) {
     const isEdit = !!initialData?.id;
+    const showDiretoriaField = isEdit || !defaultDiretoriaId;
     const [espInput, setEspInput] = useState("");
 
     const form = useForm<AreaFormValues>({
@@ -76,9 +79,17 @@ export function AreaForm({
     const { data: colaboradores = [], isLoading: isColabsLoading } = useQuery({
         queryKey: ["colaboradores-lideres"],
         queryFn: async () => {
-            const { data, error } = await supabase.from("colaboradores").select("id, nome_completo");
+            const { data, error } = await supabase
+                .from("colaboradores")
+                .select("id, nome_completo, senioridade")
+                .in("senioridade", ["Diretor(a)", "Head", "Gerente"])
+                .eq("status", "Ativo");
             if (error) return [];
-            return (data || []).map((c: any) => ({ id: c.id, nomeCompleto: c.nome_completo }));
+            return (data || []).map((c: any) => ({
+                id: c.id,
+                nomeCompleto: c.nome_completo,
+                senioridade: c.senioridade,
+            }));
         },
     });
 
@@ -101,7 +112,7 @@ export function AreaForm({
             } else {
                 form.reset({
                     nome: "",
-                    diretoria_id: (initialData as any)?.diretoria_id ?? "",
+                    diretoria_id: defaultDiretoriaId ?? "",
                     lideres: [],
                     descricao: "",
                     especialidades: [],
@@ -109,7 +120,7 @@ export function AreaForm({
             }
             setEspInput("");
         }
-    }, [open, initialData, existingEspecialidades]);
+    }, [open, initialData, defaultDiretoriaId, existingEspecialidades]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
         await onSubmit(values);
@@ -162,6 +173,7 @@ export function AreaForm({
                             />
 
                             {/* Diretoria */}
+                            {showDiretoriaField && (
                             <FormField
                                 control={form.control}
                                 name="diretoria_id"
@@ -171,7 +183,7 @@ export function AreaForm({
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecione uma Diretoria" />
+                                                    <SelectValue />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
@@ -184,6 +196,7 @@ export function AreaForm({
                                     </FormItem>
                                 )}
                             />
+                            )}
 
                             {/* Descrição */}
                             <FormField
@@ -246,47 +259,20 @@ export function AreaForm({
                             <FormField
                                 control={form.control}
                                 name="lideres"
-                                render={() => (
+                                render={({ field }) => (
                                     <FormItem className="sm:col-span-2">
                                         <FormLabel>Líderes</FormLabel>
-                                        <div className="border rounded-md">
-                                            <ScrollArea className="h-[150px] w-full p-4">
-                                                {isColabsLoading ? (
-                                                    <p className="text-sm text-muted-foreground p-2 text-center">Carregando...</p>
-                                                ) : colaboradores.length === 0 ? (
-                                                    <p className="text-sm text-muted-foreground p-2 text-center">Nenhum colaborador encontrado.</p>
-                                                ) : (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                        {colaboradores.map((colab) => (
-                                                            <FormField
-                                                                key={colab.id}
-                                                                control={form.control}
-                                                                name="lideres"
-                                                                render={({ field }) => (
-                                                                    <FormItem
-                                                                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 hover:bg-muted/50 cursor-pointer"
-                                                                    >
-                                                                        <FormControl>
-                                                                            <Checkbox
-                                                                                checked={field.value?.includes(colab.id)}
-                                                                                onCheckedChange={(checked) => {
-                                                                                    return checked
-                                                                                        ? field.onChange([...field.value, colab.id])
-                                                                                        : field.onChange(field.value?.filter((v) => v !== colab.id));
-                                                                                }}
-                                                                            />
-                                                                        </FormControl>
-                                                                        <FormLabel className="font-normal cursor-pointer">
-                                                                            {colab.nomeCompleto}
-                                                                        </FormLabel>
-                                                                    </FormItem>
-                                                                )}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </ScrollArea>
-                                        </div>
+                                        <p className="text-xs text-muted-foreground -mt-1">
+                                            Gerentes, Heads e Diretores ativos.
+                                        </p>
+                                        <FormControl>
+                                            <LideresAutocomplete
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                options={colaboradores}
+                                                isLoading={isColabsLoading}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}

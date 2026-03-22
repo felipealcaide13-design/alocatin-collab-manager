@@ -36,7 +36,11 @@ export function ContratoDetailPanel({ contrato, open, onClose, torres, squads }:
       contrato.torres?.includes(t.id)
     );
 
-    const squadsVinculadas = squads.filter((s) => s.contrato_id === contrato.id);
+    // Se há squads_ids específicas, mostrar só elas; senão, todas as squads das torres vinculadas
+    const specificIds = contrato.squads_ids ?? [];
+    const squadsVinculadas = specificIds.length > 0
+      ? squads.filter((s) => specificIds.includes(s.id))
+      : squads.filter((s) => s.contrato_id === contrato.id);
 
     return { torresVinculadas, squadsVinculadas };
   }, [contrato, torres, squads]);

@@ -21,6 +21,7 @@ import { Squad } from "@/types/torre";
 import { colaboradorService } from "@/services/colaboradorService";
 import { contratoService } from "@/services/contratoService";
 import { torreService } from "@/services/torreService";
+import { isCamadaPermitida } from "@/utils/senioridadeCamadas";
 
 const schema = z.object({
     nome: z.string().min(3, "O nome deve ter ao menos 3 caracteres"),
@@ -50,6 +51,9 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
         queryFn: () => colaboradorService.getAll(),
     });
 
+    // Apenas senioridades permitidas na camada Squad
+    const colaboradoresSquad = colaboradores.filter((c) => isCamadaPermitida(c.senioridade, "Squad"));
+
     const { data: contratos = [] } = useQuery({
         queryKey: ["contratos"],
         queryFn: () => contratoService.getAll(),
@@ -75,12 +79,16 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
     useEffect(() => {
         if (open) {
             if (initialData) {
+                // Fonte da verdade: colaboradores que têm este squad_id
+                const membrosAtuais = colaboradores
+                    .filter((c) => (c.squad_ids ?? []).includes(initialData.id))
+                    .map((c) => c.id);
                 form.reset({
                     nome: initialData.nome,
                     torre_id: initialData.torre_id,
                     contrato_id: initialData.contrato_id || null,
                     lider: initialData.lider,
-                    membros: initialData.membros || [],
+                    membros: membrosAtuais,
                     descricao: initialData.descricao || "",
                 });
             } else {
@@ -94,7 +102,7 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                 });
             }
         }
-    }, [open, initialData, form]);
+    }, [open, initialData, form, colaboradores]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
         const payload = { ...values };
@@ -127,7 +135,7 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                                 <FormLabel>Torre Associada *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Selecione uma Torre" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                         {torres.map((t) => (
@@ -146,7 +154,7 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                                 <FormLabel>Contrato Relacionado</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Selecione um contrato" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                         <SelectItem value="none">Nenhum</SelectItem>
@@ -172,7 +180,7 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                                                 <div className="flex flex-wrap gap-1 items-center">
                                                     {field.value.length === 0 ? "Selecione membros..." : (
                                                         field.value.slice(0, 3).map((colabId) => {
-                                                            const colab = colaboradores.find(c => c.id === colabId);
+                                                            const colab = colaboradoresSquad.find(c => c.id === colabId);
                                                             return (
                                                                 <Badge key={colabId} variant="secondary" className="mr-1 mb-1 font-normal">
                                                                     {colab ? colab.nomeCompleto : "Desconhecido"}
@@ -203,7 +211,7 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                                                 <CommandEmpty>Nenhum colaborador encontrado.</CommandEmpty>
                                                 <CommandGroup>
                                                     <ScrollArea className="h-64">
-                                                        {colaboradores.map((colab) => (
+                                                        {colaboradoresSquad.map((colab) => (
                                                             <CommandItem
                                                                 key={colab.id}
                                                                 value={colab.nomeCompleto}

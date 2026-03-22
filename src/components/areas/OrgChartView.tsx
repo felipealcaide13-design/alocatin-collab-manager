@@ -5,7 +5,9 @@ import { ZoomIn, ZoomOut, Maximize2, AlignCenter, LayoutList, Network } from "lu
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { colaboradorService } from "@/services/colaboradorService";
+import { diretoriaService } from "@/services/diretoriaService";
 import { type Colaborador, type Senioridade } from "@/types/colaborador";
+import { type Diretoria } from "@/types/diretoria";
 
 type Layout = "cima" | "esquerda" | "direita" | "baixo";
 type D3Layout = "top" | "left" | "right" | "bottom";
@@ -21,7 +23,7 @@ interface OrgNode {
   id: string;
   parentId: string | null;
   name: string;
-  senioridade: Senioridade | "empresa";
+  senioridade: Senioridade | "diretoria" | "sem-diretoria";
   status?: string;
 }
 
@@ -31,7 +33,8 @@ const SENIORITY_ORDER: Senioridade[] = [
 ];
 
 const SENIORITY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  "empresa":         { bg: "#0f172a", border: "#1e293b", text: "#f8fafc" },
+  "diretoria":       { bg: "#0f172a", border: "#1e293b", text: "#f8fafc" },
+  "sem-diretoria":   { bg: "#374151", border: "#4b5563", text: "#f9fafb" },
   "C-level":         { bg: "#7c3aed", border: "#6d28d9", text: "#f5f3ff" },
   "Diretor(a)":      { bg: "#1d4ed8", border: "#1e40af", text: "#eff6ff" },
   "Head":            { bg: "#0369a1", border: "#075985", text: "#e0f2fe" },
@@ -51,37 +54,83 @@ const VALID_PARENT_SENIORITIES: Partial<Record<Senioridade, Senioridade[]>> = {
   "Coordenador(a)": ["Gerente", "Head", "Diretor(a)", "C-level"],
   "Staf I":         ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
   "Staf II":        ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
-  "Analista senior":["Coordenador(a)", "Gerente", "Diretor(a)", "C-level"],
-  "Analista pleno": ["Coordenador(a)", "Gerente", "Diretor(a)", "C-level"],
-  "Analista junior":["Coordenador(a)", "Gerente", "Diretor(a)", "C-level"],
+  "Analista senior":["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
+  "Analista pleno": ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
+  "Analista junior":["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
 };
 
 function seniorityIndex(s: Senioridade): number {
   return SENIORITY_ORDER.indexOf(s);
 }
 
-function buildNodes(colaboradores: Colaborador[]): OrgNode[] {
-  const ativos = colaboradores.filter((c) => c.status === "Ativo");
-  const root: OrgNode = { id: "empresa", parentId: null, name: "Alocatin", senioridade: "empresa" };
-  const nodes: OrgNode[] = [root];
+const VIRTUAL_ROOT_ID = "__root__";
 
-  const sorted = [...ativos].sort(
-    (a, b) => seniorityIndex(a.senioridade) - seniorityIndex(b.senioridade)
+function buildNodes(colaboradores: Colaborador[], diretorias: Diretoria[]): OrgNode[] {
+  const ativos = colaboradores.filter((c) => c.status === "Ativo");
+
+  // Nó raiz virtual — necessário porque d3-org-chart exige exatamente um parentId: null
+  const nodes: OrgNode[] = [
+    { id: VIRTUAL_ROOT_ID, parentId: null, name: "root", senioridade: "diretoria" },
+  ];
+
+  // Índice rápido: id → nó já inserido (para resolver lider_id cross-group)
+  const nodeById = new Map<string, OrgNode>();
+
+  // Ordena globalmente: líderes antes de subordinados (topological sort por lider_id)
+  function topoSort(list: Colaborador[]): Colaborador[] {
+    const idMap = new Map(list.map((c) => [c.id, c]));
+    const result: Colaborador[] = [];
+    const visited = new Set<string>();
+
+    function visit(c: Colaborador) {
+      if (visited.has(c.id)) return;
+      // Processa o líder primeiro, se existir na lista
+      if (c.lider_id && idMap.has(c.lider_id)) {
+        visit(idMap.get(c.lider_id)!);
+      }
+      visited.add(c.id);
+      result.push(c);
+    }
+
+    for (const c of list) visit(c);
+    return result;
+  }
+
+  const sorted = topoSort(
+    [...ativos].sort((a, b) => seniorityIndex(a.senioridade) - seniorityIndex(b.senioridade))
   );
 
-  function findParent(colab: Colaborador): string {
+  // Agrupa colaboradores por diretoria_id
+  const byDiretoria = new Map<string | null, Colaborador[]>();
+  for (const c of sorted) {
+    const key = c.diretoria_id ?? null;
+    if (!byDiretoria.has(key)) byDiretoria.set(key, []);
+    byDiretoria.get(key)!.push(c);
+  }
+
+  function addNode(node: OrgNode) {
+    nodes.push(node);
+    nodeById.set(node.id, node);
+  }
+
+  function findParent(colab: Colaborador, groupNodes: OrgNode[], rootId: string): string {
+    // Líder direto definido — busca primeiro no grupo, depois no índice global
+    if (colab.lider_id) {
+      if (nodeById.has(colab.lider_id)) return colab.lider_id;
+    }
+
     const validSeniorities = VALID_PARENT_SENIORITIES[colab.senioridade] ?? [];
-    const candidates = nodes.filter(
-      (n) => n.senioridade !== "empresa" && validSeniorities.includes(n.senioridade as Senioridade)
+    const candidates = groupNodes.filter(
+      (n) => n.senioridade !== "diretoria" && n.senioridade !== "sem-diretoria"
+        && validSeniorities.includes(n.senioridade as Senioridade)
     );
-    if (candidates.length === 0) return "empresa";
+    if (candidates.length === 0) return rootId;
 
     function score(n: OrgNode): number {
       const c = ativos.find((x) => x.id === n.id);
       if (!c) return 0;
       let s = 0;
       if (colab.area_ids.some((a) => c.area_ids.includes(a))) s += 10;
-      if (colab.diretoria_id && c.diretoria_id === colab.diretoria_id) s += 4;
       const preferenceIdx = validSeniorities.indexOf(n.senioridade as Senioridade);
       s += Math.max(0, (validSeniorities.length - preferenceIdx) * 2);
       return s;
@@ -90,20 +139,54 @@ function buildNodes(colaboradores: Colaborador[]): OrgNode[] {
     return candidates.reduce((a, b) => (score(b) > score(a) ? b : a)).id;
   }
 
+  // Subtree por diretoria — cada nó de diretoria é filho do root virtual
+  // Primeiro cria todos os nós de diretoria
+  const dirNodeIds = new Map<string, string>();
+  for (const diretoria of [...diretorias].sort((a, b) => a.nome.localeCompare(b.nome))) {
+    const members = byDiretoria.get(diretoria.id) ?? [];
+    if (members.length === 0) continue;
+    const dirNodeId = `diretoria-${diretoria.id}`;
+    const dirNode: OrgNode = { id: dirNodeId, parentId: VIRTUAL_ROOT_ID, name: diretoria.nome, senioridade: "diretoria" };
+    addNode(dirNode);
+    dirNodeIds.set(diretoria.id, dirNodeId);
+  }
+
+  // Nó "Sem Diretoria" se necessário
+  const semDiretoria = byDiretoria.get(null) ?? [];
+  if (semDiretoria.length > 0) {
+    addNode({ id: "sem-diretoria", parentId: VIRTUAL_ROOT_ID, name: "Sem Diretoria", senioridade: "sem-diretoria" });
+  }
+
+  // Processa colaboradores em ordem topológica (líderes antes de subordinados)
+  // Isso garante que lider_id cross-diretoria funcione corretamente
   for (const c of sorted) {
-    const parentId = c.senioridade === "C-level" ? "empresa" : findParent(c);
-    nodes.push({ id: c.id, parentId, name: c.nomeCompleto, senioridade: c.senioridade, status: c.status });
+    const dirNodeId = c.diretoria_id
+      ? (dirNodeIds.get(c.diretoria_id) ?? VIRTUAL_ROOT_ID)
+      : (semDiretoria.length > 0 ? "sem-diretoria" : VIRTUAL_ROOT_ID);
+
+    // Para o fallback por score, usa colaboradores ativos da mesma diretoria já inseridos
+    const sameGroupNodes = nodes.filter(
+      (n) => n.id !== VIRTUAL_ROOT_ID && n.id !== dirNodeId && n.id !== "sem-diretoria"
+        && ativos.find((x) => x.id === n.id)?.diretoria_id === c.diretoria_id
+    );
+
+    const parentId = findParent(c, sameGroupNodes, dirNodeId);
+    addNode({ id: c.id, parentId, name: c.nomeCompleto, senioridade: c.senioridade, status: c.status });
   }
 
   return nodes;
 }
 
 function nodeContent(d: any): string {
+  // Nó raiz virtual — invisível
+  if (d.data.id === VIRTUAL_ROOT_ID) {
+    return `<div style="width:${d.width}px;height:${d.height}px;opacity:0;pointer-events:none;"></div>`;
+  }
+
   const colors = SENIORITY_COLORS[d.data.senioridade] ?? SENIORITY_COLORS["Analista junior"];
-  const isRoot = d.data.senioridade === "empresa";
-  const initials = isRoot
-    ? "A"
-    : d.data.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+  const isDiretoria = d.data.senioridade === "diretoria" || d.data.senioridade === "sem-diretoria";
+  const initials = d.data.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+  const label = isDiretoria ? "Diretoria" : d.data.senioridade;
 
   return `
     <div style="
@@ -114,7 +197,7 @@ function nodeContent(d: any): string {
       box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;
     ">
       <div style="
-        width:36px;height:36px;border-radius:50%;
+        width:36px;height:36px;border-radius:${isDiretoria ? "8px" : "50%"};
         background:rgba(255,255,255,0.15);
         display:flex;align-items:center;justify-content:center;
         font-size:13px;font-weight:700;color:${colors.text};flex-shrink:0;
@@ -124,7 +207,7 @@ function nodeContent(d: any): string {
           font-size:10px;color:${colors.text};opacity:0.75;
           text-transform:uppercase;letter-spacing:0.05em;
           margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-        ">${isRoot ? "Empresa" : d.data.senioridade}</div>
+        ">${label}</div>
         <div style="
           font-size:13px;font-weight:600;color:${colors.text};
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -148,7 +231,12 @@ export function OrgChartView() {
     queryFn: () => colaboradorService.getAll().catch(() => []),
   });
 
-  const nodes = useMemo(() => buildNodes(colaboradores), [colaboradores]);
+  const { data: diretorias = [], isLoading: loadingDiretorias } = useQuery({
+    queryKey: ["diretorias"],
+    queryFn: () => diretoriaService.getAll().catch(() => []),
+  });
+
+  const nodes = useMemo(() => buildNodes(colaboradores, diretorias), [colaboradores, diretorias]);
 
   // Observa o wrapper para detectar quando ele tem dimensões reais
   useEffect(() => {
@@ -182,8 +270,8 @@ export function OrgChartView() {
       .svgWidth(wrapperSize.w)
       .svgHeight(wrapperSize.h)
       .nodeWidth(() => 210)
-      .nodeHeight(() => 76)
-      .childrenMargin(() => 50)
+      .nodeHeight((d: any) => d.data.id === VIRTUAL_ROOT_ID ? 1 : 76)
+      .childrenMargin((d: any) => d.data.id === VIRTUAL_ROOT_ID ? 20 : 50)
       .compactMarginBetween(() => 20)
       .compactMarginPair(() => 30)
       .siblingsMargin(() => 20)
@@ -237,22 +325,9 @@ export function OrgChartView() {
         </Button>
       </div>
 
-      {/* Legenda */}
-      <div className="flex items-center gap-3 shrink-0 flex-wrap">
-        {SENIORITY_ORDER.map((s) => {
-          const c = SENIORITY_COLORS[s];
-          return (
-            <div key={s} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ background: c.bg, border: `1.5px solid ${c.border}` }} />
-              <span className="text-xs text-muted-foreground">{s}</span>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Board — ref no wrapper para o ResizeObserver medir as dimensões reais */}
       <div ref={wrapperRef} className="min-h-0 flex-1 bg-card border rounded-xl shadow-sm overflow-hidden relative">
-        {isLoading ? (
+        {isLoading || loadingDiretorias ? (
           <div className="p-8 space-y-4">
             <Skeleton className="h-20 w-48 mx-auto" />
             <div className="flex justify-center gap-6">

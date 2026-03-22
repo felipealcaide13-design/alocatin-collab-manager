@@ -116,5 +116,23 @@ export const torreService = {
     async removeSquad(id: string): Promise<void> {
         const { error } = await supabase.from("squads").delete().eq("id", id);
         if (error) throw new Error(error.message);
-    }
+    },
+
+    /** Adiciona colaborador aos membros de uma squad */
+    async addMembroToSquad(squadId: string, colaboradorId: string): Promise<void> {
+        const { data, error } = await supabase.from("squads").select("membros").eq("id", squadId).single();
+        if (error) throw new Error(error.message);
+        const membros: string[] = data?.membros ?? [];
+        if (!membros.includes(colaboradorId)) {
+            await supabase.from("squads").update({ membros: [...membros, colaboradorId] }).eq("id", squadId);
+        }
+    },
+
+    /** Remove colaborador dos membros de uma squad */
+    async removeMembroFromSquad(squadId: string, colaboradorId: string): Promise<void> {
+        const { data, error } = await supabase.from("squads").select("membros").eq("id", squadId).single();
+        if (error) throw new Error(error.message);
+        const membros: string[] = (data?.membros ?? []).filter((id: string) => id !== colaboradorId);
+        await supabase.from("squads").update({ membros }).eq("id", squadId);
+    },
 };
