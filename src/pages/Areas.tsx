@@ -350,7 +350,7 @@ export default function Areas() {
 
     return (
         <PageLayout
-            title="Estrutura Organizacional"
+            title="Diretorias"
             subtitle={isLoading ? "Carregando..." : `${diretorias.length} diretoria(s) · ${areas.length} área(s)`}
             action={
                 <Button

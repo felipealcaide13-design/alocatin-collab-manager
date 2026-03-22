@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { ColaboradorForm } from "@/components/colaboradores/ColaboradorForm";
 import { DeleteConfirmDialog } from "@/components/colaboradores/DeleteConfirmDialog";
 import { AlocacaoSquadDialog } from "@/components/colaboradores/AlocacaoSquadDialog";
+import { HistoricoAlteracoes } from "@/components/colaboradores/HistoricoAlteracoes";
 import { colaboradorService } from "@/services/colaboradorService";
 import { areaService } from "@/services/areaService";
 import { especialidadeService } from "@/services/especialidadeService";
@@ -57,6 +58,7 @@ export default function ColaboradorDetail() {
     queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
     queryClient.invalidateQueries({ queryKey: ["squads"] });
     queryClient.invalidateQueries({ queryKey: ["torres"] });
+    queryClient.invalidateQueries({ queryKey: ["historico", id] });
   };
 
   const alocacaoMutation = useMutation({
@@ -117,7 +119,7 @@ export default function ColaboradorDetail() {
     const colabAreas = areas.filter((a) => colaborador.area_ids.includes(a.id));
     const especialidade = especialidades.find((e) => e.id === colaborador.especialidade_id);
 
-    const colabSquads = squads.filter((sq) => (sq.membros ?? []).includes(colaborador.id));
+    const colabSquads = squads.filter((sq) => (colaborador.squad_ids ?? []).includes(sq.id));
 
     const squadDetails = colabSquads.map((sq) => {
       const torre = torres.find((t) => t.id === sq.torre_id);
@@ -323,6 +325,15 @@ export default function ColaboradorDetail() {
           </div>
         </DetailSection>
       )}
+
+      {/* Histórico de Alterações */}
+      <HistoricoAlteracoes
+        colaboradorId={colaborador.id}
+        torres={torres}
+        squads={squads}
+        diretorias={diretorias}
+        businessUnits={businessUnits}
+      />
 
       {/* Modals */}
       <ColaboradorForm

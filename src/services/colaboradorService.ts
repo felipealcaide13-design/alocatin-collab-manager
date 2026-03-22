@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Colaborador, ColaboradorInput } from "@/types/colaborador";
 import { supabase } from "@/lib/supabase";
+import { diffCamposRastreaveis, historicoService } from "@/services/historicoService";
 
 function fromDb(row: any): Colaborador {
   return {
@@ -74,6 +75,14 @@ export const colaboradorService = {
   },
 
   async update(id: string, input: Partial<ColaboradorInput>): Promise<Colaborador> {
+    const anterior = await colaboradorService.getById(id);
+    if (!anterior) throw new Error("Colaborador não encontrado.");
+
+    const eventos = diffCamposRastreaveis(anterior, input);
+    if (eventos.length > 0) {
+      await historicoService.registrar(eventos);
+    }
+
     const { data, error } = await supabase
       .from("colaboradores")
       .update(toDb(input))
@@ -85,6 +94,26 @@ export const colaboradorService = {
   },
 
   async remove(id: string): Promise<void> {
+    // Remove o colaborador de squads.membros (array sem FK, não tem CASCADE automático)
+    const { data: squadsComMembro } = await supabase
+      .from("squads")
+      .select("id, membros")
+      .contains("membros", [id]);
+
+    if (squadsComMembro && squadsComMembro.length > 0) {
+      await Promise.all(
+        squadsComMembro.map((sq) =>
+          supabase
+            .from("squads")
+            .update({ membros: (sq.membros ?? []).filter((mid: string) => mid !== id) })
+            .eq("id", sq.id)
+        )
+      );
+    }
+
+    // historico_alteracoes tem ON DELETE CASCADE — deletado automaticamente
+    // lider_id em colaboradores tem ON DELETE SET NULL — limpo automaticamente
+    // squads.lider tem ON DELETE SET NULL — limpo automaticamente
     const { error } = await supabase.from("colaboradores").delete().eq("id", id);
     if (error) throw new Error(error.message);
   },

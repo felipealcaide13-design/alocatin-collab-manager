@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   User, Mail, FileText, Calendar, Building2, Layers, Network, ChevronRight, Briefcase, UserCheck,
 } from "lucide-react";
+import { HistoricoAlteracoes } from "@/components/colaboradores/HistoricoAlteracoes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -50,9 +51,7 @@ export function ColaboradorDetailPanel({
     const colabAreas = areas.filter((a) => colaborador.area_ids.includes(a.id));
     const especialidade = especialidades.find((e) => e.id === colaborador.especialidade_id);
 
-    const colabSquads = squads.filter((sq) =>
-      (sq.membros ?? []).includes(colaborador.id)
-    );
+    const colabSquads = squads.filter((sq) => (colaborador.squad_ids ?? []).includes(sq.id));
 
     const squadDetails = colabSquads.map((sq) => {
       const torre = torres.find((t) => t.id === sq.torre_id);
@@ -197,6 +196,15 @@ export function ColaboradorDetailPanel({
             </div>
           </DetailSection>
         )}
+
+        {/* Histórico de Alterações */}
+        <HistoricoAlteracoes
+          colaboradorId={colaborador.id}
+          torres={torres}
+          squads={squads}
+          diretorias={diretorias}
+          businessUnits={businessUnits}
+        />
       </DialogContent>
     </Dialog>
   );

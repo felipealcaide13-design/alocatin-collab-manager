@@ -9,7 +9,7 @@ const navItems = [
   { icon: Building2, label: "Business Units", to: "/business-units" },
   { icon: FileText, label: "Contratos", to: "/contratos" },
   { icon: Users, label: "Colaboradores", to: "/colaboradores" },
-  { icon: Layers, label: "Estrutura Org.", to: "/areas" },
+  { icon: Layers, label: "Diretorias", to: "/areas" },
 ];
 
 interface AppLayoutProps {

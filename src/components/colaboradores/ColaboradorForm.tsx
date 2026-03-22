@@ -84,6 +84,8 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
   const senioridade = form.watch("senioridade");
   const diretoriaId = form.watch("diretoria_id");
   const areaIds = form.watch("area_ids");
+  const buId = form.watch("bu_id");
+  const torreIds = form.watch("torre_ids");
 
   // Ref para evitar que o effect de senioridade rode no reset inicial
   const isInitializing = useRef(false);
@@ -93,6 +95,9 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
   const showBU = camadasPermitidas.includes("BU");
   const showTorre = camadasPermitidas.includes("Torre");
   const showSquad = camadasPermitidas.includes("Squad");
+
+  // Analistas e Staff: apenas Squad visível, Torre derivada automaticamente
+  const isApenasSquad = showSquad && !showTorre;
 
   // Manter lógica de área/especialidade baseada em grupos de senioridade
   const isGestor = ["Head", "Gerente", "Coordenador(a)"].includes(senioridade);
@@ -139,6 +144,19 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     queryKey: ["squads-all"],
     queryFn: () => torreService.getAllSquads().catch(() => []),
   });
+
+  // Squads filtradas pelas torres selecionadas (quando Torre é visível)
+  // Para analistas/staff (isApenasSquad) ou sem torre selecionada: todas as squads
+  const squadsDisponiveis = useMemo(() => {
+    if (isApenasSquad || torreIds.length === 0) return squads;
+    return squads.filter((s) => torreIds.includes(s.torre_id));
+  }, [squads, torreIds, isApenasSquad]);
+
+  // Torres filtradas pela BU selecionada (quando BU visível e selecionada)
+  const torresDisponiveis = useMemo(() => {
+    if (!showBU || !buId) return torres;
+    return torres.filter((t: Torre) => t.bu_id === buId);
+  }, [torres, buId, showBU]);
 
   // Todos colaboradores ativos para o select de líder
   const { data: todosColaboradores = [] } = useQuery({
@@ -246,6 +264,13 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     if (isIC) form.setValue("especialidade_id", null);
   }, [areaIds.join(",")]);
 
+  // Reset torre e squad quando BU muda (não roda no reset inicial)
+  useEffect(() => {
+    if (isInitializing.current) return;
+    form.setValue("torre_ids", []);
+    form.setValue("squad_ids", []);
+  }, [buId]);
+
   // ── Helpers para multi-select ─────────────────────────────
   const toggleArea = (id: string) => {
     const current = form.getValues("area_ids");
@@ -267,6 +292,18 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
   };
 
   const handleSubmit = form.handleSubmit(async (values) => {
+    // Para analistas/staff (só Squad): derivar torre_ids automaticamente das squads selecionadas
+    if (isApenasSquad && values.squad_ids.length > 0) {
+      const torresDerivadas = [
+        ...new Set(
+          values.squad_ids
+            .map((sid) => squads.find((s) => s.id === sid)?.torre_id)
+            .filter(Boolean) as string[]
+        ),
+      ];
+      values.torre_ids = torresDerivadas;
+    }
+
     // Derivar camadas ativas para validação
     const camadasSelecionadas: Camada[] = [];
     if (values.bu_id) camadasSelecionadas.push("BU");
@@ -335,7 +372,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               )} />
             </div>
 
-            {/* ── Bloco 2: Senioridade (define o fluxo) ── */}
+            {/* ══ GRUPO 1: Cargo e Estrutura Organizacional ══ */}
             <FormField control={form.control} name="senioridade" render={({ field }) => (
               <FormItem>
                 <FormLabel>Senioridade *</FormLabel>
@@ -353,76 +390,6 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               </FormItem>
             )} />
 
-            {/* ── Bloco 3: BU — C-level e Diretor(a) ── */}
-            {showBU && (
-              <FormField control={form.control} name="bu_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Business Unit</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
-                    value={field.value ?? ""}
-                    disabled={isDesligado}
-                  >
-                    <FormControl>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                      {businessUnits.map((bu: BusinessUnit) => (
-                        <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
-
-            {/* ── Bloco 4: Torre — multi-select com chips ── */}
-            {showTorre && (
-              <FormField control={form.control} name="torre_ids" render={() => (
-                <FormItem>
-                  <FormLabel>
-                    Torre
-                    <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>
-                  </FormLabel>
-
-                  {form.watch("torre_ids").length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {form.watch("torre_ids").map((id) => {
-                        const torre = torres.find((t: Torre) => t.id === id);
-                        return (
-                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                            {torre?.nome ?? id}
-                            <button type="button" onClick={() => toggleTorre(id)} className="hover:text-destructive">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <Select onValueChange={(v) => toggleTorre(v)} value="" disabled={isDesligado}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {torres
-                        .filter((t: Torre) => !form.watch("torre_ids").includes(t.id))
-                        .map((t: Torre) => (
-                          <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
-
-            {/* ── Bloco 5: Diretoria (todos exceto sem senioridade) ── */}
             {senioridade && (
               <FormField control={form.control} name="diretoria_id" render={({ field }) => (
                 <FormItem>
@@ -447,16 +414,13 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               )} />
             )}
 
-            {/* ── Bloco 6: Área(s) — Gestores (multi) e ICs (single) ── */}
             {showArea && (
               <FormField control={form.control} name="area_ids" render={() => (
                 <FormItem>
                   <FormLabel>
-                    {multiArea ? "Áreas" : "Área *"}
+                    {multiArea ? "Áreas" : "Área"}
                     {multiArea && <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>}
                   </FormLabel>
-
-                  {/* Chips das selecionadas */}
                   {areaIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-1">
                       {areaIds.map((id) => {
@@ -472,17 +436,8 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                       })}
                     </div>
                   )}
-
-                  <Select
-                    onValueChange={(v) => toggleArea(v)}
-                    value=""
-                    disabled={isDesligado}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
+                  <Select onValueChange={(v) => toggleArea(v)} value="" disabled={isDesligado}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       {areasDaDiretoria
                         .filter((a: AreaEntity) => !areaIds.includes(a.id))
@@ -496,19 +451,16 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               )} />
             )}
 
-            {/* ── Bloco 7: Especialidade — apenas ICs, 1 área selecionada ── */}
             {showEspecialidade && singleAreaId && especialidades.length > 0 && (
               <FormField control={form.control} name="especialidade_id" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Especialidade *</FormLabel>
+                  <FormLabel>Especialidade</FormLabel>
                   <Select
                     onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
                     value={field.value ?? ""}
                     disabled={isDesligado}
                   >
-                    <FormControl>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                    </FormControl>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="nenhuma">Nenhuma</SelectItem>
                       {especialidades.map((e) => (
@@ -521,52 +473,6 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               )} />
             )}
 
-            {/* ── Bloco 8: Squad(s) — senioridades com Squad nas camadas permitidas ── */}
-            {showSquad && (
-              <FormField control={form.control} name="squad_ids" render={() => (
-                <FormItem>
-                  <FormLabel>
-                    Squad
-                    <span className="text-xs text-muted-foreground ml-1">(opcional, pode selecionar mais de uma)</span>
-                  </FormLabel>
-
-                  {/* Chips das selecionadas */}
-                  {form.watch("squad_ids").length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {form.watch("squad_ids").map((id) => {
-                        const squad = squads.find((s) => s.id === id);
-                        return (
-                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                            {squad?.nome ?? id}
-                            <button type="button" onClick={() => toggleSquad(id)} className="hover:text-destructive">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <Select onValueChange={(v) => toggleSquad(v)} value="" disabled={isDesligado}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {squads
-                        .filter((s) => !form.watch("squad_ids").includes(s.id))
-                        .map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
-
-            {/* ── Bloco 8b: Líder direto ── */}
             {senioridade !== "C-level" && (
               <FormField control={form.control} name="lider_id" render={({ field }) => (
                 <FormItem>
@@ -579,11 +485,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                     value={field.value ?? ""}
                     disabled={isDesligado}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="nenhum">Nenhum</SelectItem>
                       {liderCandidatos.map((c) => (
@@ -593,15 +495,127 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                         </SelectItem>
                       ))}
                       {liderCandidatos.length === 0 && (
-                        <SelectItem value="nenhum" disabled>
-                          Nenhum candidato encontrado
-                        </SelectItem>
+                        <SelectItem value="nenhum" disabled>Nenhum candidato encontrado</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )} />
+            )}
+
+            {/* ══ GRUPO 2: Alocação (BU → Torre → Squad) ══ */}
+            {(showBU || showTorre || showSquad) && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <p className="text-sm font-medium text-muted-foreground">Alocação</p>
+
+                {showBU && (
+                  <FormField control={form.control} name="bu_id" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Business Unit</FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
+                        value={field.value ?? ""}
+                        disabled={isDesligado}
+                      >
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                          {businessUnits.map((bu: BusinessUnit) => (
+                            <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+
+                {showTorre && (
+                  <FormField control={form.control} name="torre_ids" render={() => (
+                    <FormItem>
+                      <FormLabel>
+                        Torre
+                        <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>
+                      </FormLabel>
+                      {form.watch("torre_ids").length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {form.watch("torre_ids").map((id) => {
+                            const torre = torres.find((t: Torre) => t.id === id);
+                            return (
+                              <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                                {torre?.nome ?? id}
+                                <button type="button" onClick={() => toggleTorre(id)} className="hover:text-destructive">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <Select onValueChange={(v) => toggleTorre(v)} value="" disabled={isDesligado}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {torresDisponiveis
+                            .filter((t: Torre) => !form.watch("torre_ids").includes(t.id))
+                            .map((t: Torre) => (
+                              <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+
+                {showSquad && (
+                  <FormField control={form.control} name="squad_ids" render={() => (
+                    <FormItem>
+                      <FormLabel>
+                        Squad
+                        {isApenasSquad
+                          ? <span className="text-xs text-muted-foreground ml-1">(opcional, pode selecionar mais de uma)</span>
+                          : <span className="text-xs text-muted-foreground ml-1">(opcional — vazio = todas as squads das torres)</span>
+                        }
+                      </FormLabel>
+                      {form.watch("squad_ids").length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {form.watch("squad_ids").map((id) => {
+                            const squad = squads.find((s) => s.id === id);
+                            return (
+                              <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                                {squad?.nome ?? id}
+                                <button type="button" onClick={() => toggleSquad(id)} className="hover:text-destructive">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <Select
+                        onValueChange={(v) => toggleSquad(v)}
+                        value=""
+                        disabled={isDesligado || (showTorre && torreIds.length === 0)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={showTorre && torreIds.length === 0 ? "Selecione uma Torre primeiro" : undefined} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {squadsDisponiveis
+                            .filter((s) => !form.watch("squad_ids").includes(s.id))
+                            .map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+              </div>
             )}
 
             {/* ── Bloco 9: Status e Data ── */}
