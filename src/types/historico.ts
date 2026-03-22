@@ -1,4 +1,5 @@
 export type CampoRastreavel =
+  | "cadastro"
   | "senioridade"
   | "diretoria_id"
   | "status"
@@ -16,6 +17,7 @@ export const CAMPOS_RASTREAVEIS: readonly CampoRastreavel[] = [
 ] as const;
 
 export const ROTULOS_CAMPOS: Record<CampoRastreavel, string> = {
+  cadastro:     "Cadastro",
   senioridade:  "Senioridade",
   diretoria_id: "Diretoria",
   status:       "Status",

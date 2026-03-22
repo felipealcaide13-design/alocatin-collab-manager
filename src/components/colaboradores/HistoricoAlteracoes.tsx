@@ -15,6 +15,26 @@ interface Props {
   businessUnits: BusinessUnit[];
 }
 
+/** Extrai nome legível de um item do histórico — suporta formato legado (só ID) e novo ({id, nome}) */
+function resolverItem(
+  raw: unknown,
+  lista: { id: string; nome: string }[]
+): string {
+  if (typeof raw === "object" && raw !== null) {
+    const obj = raw as { id?: string; nome?: string };
+    if (obj.nome) return obj.nome;
+    if (obj.id) {
+      const found = lista.find((x) => x.id === obj.id);
+      return found ? found.nome : `${obj.id.slice(0, 8)}… (removido)`;
+    }
+  }
+  if (typeof raw === "string") {
+    const found = lista.find((x) => x.id === raw);
+    return found ? found.nome : `${raw.slice(0, 8)}… (removido)`;
+  }
+  return "—";
+}
+
 export function resolverValorCampo(
   campo: CampoRastreavel,
   valor: string | null,
@@ -26,25 +46,46 @@ export function resolverValorCampo(
   if (valor === null || valor === undefined) return "—";
 
   if (campo === "torre_ids" || campo === "squad_ids") {
-    let ids: string[];
+    let parsed: unknown[];
     try {
-      ids = JSON.parse(valor);
+      parsed = JSON.parse(valor);
     } catch {
       return valor;
     }
-    if (!Array.isArray(ids) || ids.length === 0) return "—";
+    if (!Array.isArray(parsed) || parsed.length === 0) return "—";
     const lista = campo === "torre_ids" ? torres : squads;
-    return ids
-      .map((id) => lista.find((item) => item.id === id)?.nome ?? id)
-      .join(", ");
-  }
-
-  if (campo === "diretoria_id") {
-    return diretorias.find((d) => d.id === valor)?.nome ?? valor;
+    return parsed.map((item) => resolverItem(item, lista)).join(", ");
   }
 
   if (campo === "bu_id") {
-    return businessUnits.find((b) => b.id === valor)?.nome ?? valor;
+    // Novo formato: JSON {id, nome}
+    try {
+      const obj = JSON.parse(valor) as { id?: string; nome?: string };
+      if (obj.nome) return obj.nome;
+      if (obj.id) {
+        const found = businessUnits.find((b) => b.id === obj.id);
+        return found ? found.nome : `${obj.nome ?? obj.id} (removido)`;
+      }
+    } catch {
+      // Formato legado: só o ID
+    }
+    const found = businessUnits.find((b) => b.id === valor);
+    return found ? found.nome : "(removido)";
+  }
+
+  if (campo === "diretoria_id") {
+    try {
+      const obj = JSON.parse(valor) as { id?: string; nome?: string };
+      if (obj.nome) return obj.nome;
+      if (obj.id) {
+        const found = diretorias.find((d) => d.id === obj.id);
+        return found ? found.nome : `${obj.nome ?? obj.id} (removido)`;
+      }
+    } catch {
+      // Formato legado
+    }
+    const found = diretorias.find((d) => d.id === valor);
+    return found ? found.nome : "(removido)";
   }
 
   return valor;
@@ -88,14 +129,36 @@ export function HistoricoAlteracoes({
         <div className="space-y-2">
           {eventos.map((evento) => {
             const rotulo = ROTULOS_CAMPOS[evento.campo];
-            const anterior = resolverValorCampo(evento.campo, evento.valor_anterior, torres, squads, diretorias, businessUnits);
-            const novo = resolverValorCampo(evento.campo, evento.novo_valor, torres, squads, diretorias, businessUnits);
             const dataHora = new Date(evento.alterado_em).toLocaleString("pt-BR", {
               dateStyle: "short",
               timeStyle: "short",
             });
             const exibirAutor =
               evento.autor_alteracao && evento.autor_alteracao !== "sistema";
+
+            if (evento.campo === "cadastro") {
+              return (
+                <div
+                  key={evento.id}
+                  className="rounded-lg border px-3 py-2 bg-green-50 border-green-200 space-y-0.5"
+                >
+                  <p className="text-xs font-semibold text-green-700">{rotulo}</p>
+                  <p className="text-sm text-green-800 font-medium">{evento.novo_valor}</p>
+                  <div className="flex items-center gap-2 text-xs text-green-600/80 pt-0.5">
+                    <span>{dataHora}</span>
+                    {exibirAutor && (
+                      <>
+                        <span>·</span>
+                        <span>{evento.autor_alteracao}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            const anterior = resolverValorCampo(evento.campo, evento.valor_anterior, torres, squads, diretorias, businessUnits);
+            const novo = resolverValorCampo(evento.campo, evento.novo_valor, torres, squads, diretorias, businessUnits);
 
             return (
               <div

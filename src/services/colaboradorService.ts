@@ -71,14 +71,54 @@ export const colaboradorService = {
     const dbData = { id: uuidv4(), ...toDb(input) };
     const { data, error } = await supabase.from("colaboradores").insert(dbData).select().single();
     if (error) throw new Error(error.message);
-    return fromDb(data);
+    const colaborador = fromDb(data);
+
+    // Registra evento de cadastro no histórico
+    await historicoService.registrar([{
+      colaborador_id: colaborador.id,
+      campo: "cadastro",
+      valor_anterior: null,
+      novo_valor: colaborador.nomeCompleto,
+      autor_alteracao: "sistema",
+    }]);
+
+    return colaborador;
   },
 
   async update(id: string, input: Partial<ColaboradorInput>): Promise<Colaborador> {
     const anterior = await colaboradorService.getById(id);
     if (!anterior) throw new Error("Colaborador não encontrado.");
 
-    const eventos = diffCamposRastreaveis(anterior, input);
+    // Buscar nomes das entidades para enriquecer o histórico
+    const precisaNomes =
+      "torre_ids" in input || "squad_ids" in input || "bu_id" in input || "diretoria_id" in input;
+
+    let nomes: import("@/services/historicoService").NomesEntidades | undefined;
+    if (precisaNomes) {
+      const [torresData, squadsData, busData, diretoriasData] = await Promise.all([
+        "torre_ids" in input || "squad_ids" in input
+          ? supabase.from("torres").select("id, nome").then(({ data }) => data ?? [])
+          : Promise.resolve([]),
+        "squad_ids" in input
+          ? supabase.from("squads").select("id, nome").then(({ data }) => data ?? [])
+          : Promise.resolve([]),
+        "bu_id" in input
+          ? supabase.from("business_units").select("id, nome").then(({ data }) => data ?? [])
+          : Promise.resolve([]),
+        "diretoria_id" in input
+          ? supabase.from("diretorias").select("id, nome").then(({ data }) => data ?? [])
+          : Promise.resolve([]),
+      ]);
+
+      nomes = {
+        torres: Object.fromEntries(torresData.map((t: any) => [t.id, t.nome])),
+        squads: Object.fromEntries(squadsData.map((s: any) => [s.id, s.nome])),
+        businessUnits: Object.fromEntries(busData.map((b: any) => [b.id, b.nome])),
+        diretorias: Object.fromEntries(diretoriasData.map((d: any) => [d.id, d.nome])),
+      };
+    }
+
+    const eventos = diffCamposRastreaveis(anterior, input, nomes);
     if (eventos.length > 0) {
       await historicoService.registrar(eventos);
     }

@@ -12,6 +12,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_units: {
+        Row: {
+          id: string
+          nome: string
+          descricao: string | null
+          liderancas: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          descricao?: string | null
+          liderancas?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          descricao?: string | null
+          liderancas?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bu_form_config: {
+        Row: {
+          id: string
+          config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       diretorias: {
         Row: {
           id: string
@@ -227,6 +275,7 @@ export type Database = {
           gerente_produto: string | null
           gerente_design: string | null
           descricao: string | null
+          liderancas: Json
           created_at: string
           updated_at: string
         }
@@ -239,6 +288,7 @@ export type Database = {
           gerente_produto?: string | null
           gerente_design?: string | null
           descricao?: string | null
+          liderancas?: Json
           created_at?: string
           updated_at?: string
         }
@@ -251,10 +301,43 @@ export type Database = {
           gerente_produto?: string | null
           gerente_design?: string | null
           descricao?: string | null
+          liderancas?: Json
           created_at?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      bu_torre_configs: {
+        Row: {
+          id: string
+          bu_id: string
+          config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          bu_id: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          bu_id?: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bu_torre_configs_bu_id_fkey"
+            columns: ["bu_id"]
+            isOneToOne: true
+            referencedRelation: "business_units"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       squads: {
         Row: {

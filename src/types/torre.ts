@@ -21,6 +21,7 @@ export interface Torre {
     gerente_produto: string | null;
     gerente_design: string | null;
     descricao: string | null;
+    liderancas?: Record<string, string | null>;
     created_at?: string;
 
     // Custom joined fields used for display in the table

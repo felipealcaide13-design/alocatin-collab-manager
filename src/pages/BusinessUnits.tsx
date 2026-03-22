@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, Building2, Network, Eye, Layers, GitBranch, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Building2, Network, Eye, Layers, GitBranch, ChevronUp, ChevronDown, ChevronsUpDown, History } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ import { BusinessUnitForm } from "@/components/business-units/BusinessUnitForm";
 import { BusinessUnitDetailPanel } from "@/components/business-units/BusinessUnitDetailPanel";
 import { DeleteConfirmDialog as BUDeleteDialog } from "@/components/business-units/DeleteConfirmDialog";
 import { BUOrgChart } from "@/components/business-units/BUOrgChart";
+import { BUTorreConfigTab } from "@/components/business-units/BUTorreConfigTab";
+import { BUHistoricoTab } from "@/components/business-units/BUHistoricoTab";
 
 import { type Torre, type Squad } from "@/types/torre";
 import { type BusinessUnit } from "@/types/businessUnit";
@@ -169,6 +171,9 @@ export default function BusinessUnits() {
         mutationFn: (id: string) => businessUnitService.remove(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["business_units"] });
+            queryClient.invalidateQueries({ queryKey: ["torres"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
             setDeleteBUTarget(null);
             toast({ title: "BU excluída", description: "O registro foi removido." });
         },
@@ -201,6 +206,8 @@ export default function BusinessUnits() {
         mutationFn: (id: string) => torreService.removeTorre(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["torres"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
             setDeleteTorreTarget(null);
             toast({ title: "Torre excluída", description: "O registro foi removido." });
         },
@@ -236,7 +243,9 @@ export default function BusinessUnits() {
     const deleteSquadMutation = useMutation({
         mutationFn: (id: string) => torreService.removeSquad(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["squads", "torres"] });
+            queryClient.invalidateQueries({ queryKey: ["squads"] });
+            queryClient.invalidateQueries({ queryKey: ["torres"] });
+            queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
             setDeleteSquadTarget(null);
             toast({ title: "Squad excluído", description: "O registro foi removido." });
         },
@@ -319,6 +328,12 @@ export default function BusinessUnits() {
                     </TabsTrigger>
                     <TabsTrigger value="hierarquia" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                         <GitBranch className="mr-2 h-4 w-4" /> Hierarquia
+                    </TabsTrigger>
+                    <TabsTrigger value="configuracao" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                        Configuração
+                    </TabsTrigger>
+                    <TabsTrigger value="historico" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                        <History className="mr-2 h-4 w-4" /> Histórico
                     </TabsTrigger>
                 </TabsList>
 
@@ -613,9 +628,17 @@ export default function BusinessUnits() {
                         </div>
                     </div>
                 </TabsContent>
-            </Tabs>
 
-            {/* BU modals */}
+                {/* CONFIGURAÇÃO TAB */}
+                <TabsContent value="configuracao" className="space-y-4 outline-none">
+                    <BUTorreConfigTab businessUnits={businessUnits} />
+                </TabsContent>
+
+                {/* HISTÓRICO TAB */}
+                <TabsContent value="historico" className="space-y-4 outline-none">
+                    <BUHistoricoTab />
+                </TabsContent>
+            </Tabs>
             <BusinessUnitForm
                 open={buFormOpen}
                 onClose={() => { setBuFormOpen(false); setEditBUTarget(null); }}
