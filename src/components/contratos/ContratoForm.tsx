@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2, Calendar } from "lucide-react";
 import { torreService } from "@/services/torreService";
 import { cn } from "@/lib/utils";
 
@@ -336,175 +336,200 @@ export function ContratoForm({
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-muted border-0 shadow-lg">
                 <DialogHeader>
                     <DialogTitle>{isEdit ? "Editar Contrato" : "Novo Contrato"}</DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Nome */}
-                            <FormField
-                                control={form.control}
-                                name="nome"
-                                render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
-                                        <FormLabel>Nome do Contrato *</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} placeholder="Ex: BancoX Core Banking" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Cliente */}
-                            <FormField
-                                control={form.control}
-                                name="cliente"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Cliente *</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} placeholder="Ex: BancoX" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Tipo de Contrato */}
-                            <FormField
-                                control={form.control}
-                                name="contract_type"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tipo de Contrato *</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                        {/* ── Bloco 1: Detalhes do Contrato ── */}
+                        <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-4">Detalhes Gerais</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Nome */}
+                                <FormField
+                                    control={form.control}
+                                    name="nome"
+                                    render={({ field }) => (
+                                        <FormItem className="sm:col-span-2">
+                                            <FormLabel>Nome do Contrato *</FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
+                                                <Input {...field} placeholder="Ex: BancoX Core Banking" />
                                             </FormControl>
-                                            <SelectContent>
-                                                {CONTRACT_TYPES.map((t) => (
-                                                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            {/* Valor */}
-                            <FormField
-                                control={form.control}
-                                name="valor"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>
-                                            {contractType === "Aberto" ? "Valor Mensal (R$)" : "Valor Total (R$)"}
-                                        </FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="text"
-                                                value={displayValor}
-                                                onChange={(e) => handleValorChange(e, field.onChange)}
-                                                placeholder="Ex: 2.500.000"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Data Inicio */}
-                            <FormField
-                                control={form.control}
-                                name="data_inicio"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Data de Início *</FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="date" />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Data Fim */}
-                            <FormField
-                                control={form.control}
-                                name="data_fim"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>
-                                            Data de Fim {contractType === "Fechado" ? "*" : "(Opcional)"}
-                                        </FormLabel>
-                                        <FormControl>
-                                            <Input {...field} type="date" value={field.value || ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* Status */}
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status *</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                {/* Cliente */}
+                                <FormField
+                                    control={form.control}
+                                    name="cliente"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Cliente *</FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
+                                                <Input {...field} placeholder="Ex: BancoX" />
                                             </FormControl>
-                                            <SelectContent>
-                                                {CONTRATO_STATUS.map((s) => (
-                                                    <SelectItem key={s} value={s}>
-                                                        {s}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            {/* Descrição */}
-                            <FormField
-                                control={form.control}
-                                name="descricao"
-                                render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
-                                        <FormLabel>Descrição</FormLabel>
-                                        <FormControl>
-                                            <Textarea {...field} value={field.value || ""} placeholder="Breve descrição do contrato..." rows={3} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                {/* Tipo de Contrato */}
+                                <FormField
+                                    control={form.control}
+                                    name="contract_type"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo de Contrato *</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {CONTRACT_TYPES.map((t) => (
+                                                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Valor */}
+                                <FormField
+                                    control={form.control}
+                                    name="valor"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                {contractType === "Aberto" ? "Valor Mensal (R$)" : "Valor Total (R$)"}
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="text"
+                                                    value={displayValor}
+                                                    onChange={(e) => handleValorChange(e, field.onChange)}
+                                                    placeholder="Ex: 2.500.000"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Status */}
+                                <FormField
+                                    control={form.control}
+                                    name="status"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Status *</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {CONTRATO_STATUS.map((s) => (
+                                                        <SelectItem key={s} value={s}>
+                                                            {s}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Descrição */}
+                                <FormField
+                                    control={form.control}
+                                    name="descricao"
+                                    render={({ field }) => (
+                                        <FormItem className="sm:col-span-2">
+                                            <FormLabel>Descrição</FormLabel>
+                                            <FormControl>
+                                                <Textarea {...field} value={field.value || ""} placeholder="Breve descrição do contrato..." rows={3} className="rounded-2xl" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Bloco 2: Período ── */}
+                        <div className="bg-white border rounded-2xl p-4 sm:p-6 shadow-sm">
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-4">Período Vigente</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Data Inicio */}
+                                <FormField
+                                    control={form.control}
+                                    name="data_inicio"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Data de Início *</FormLabel>
+                                            <div className="relative flex items-center">
+                                                <FormControl>
+                                                    <Input 
+                                                        {...field} 
+                                                        type="date" 
+                                                        className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
+                                                    />
+                                                </FormControl>
+                                                <Calendar className="absolute right-4 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Data Fim */}
+                                <FormField
+                                    control={form.control}
+                                    name="data_fim"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                Data de Fim {contractType === "Fechado" ? "*" : "(Opcional)"}
+                                            </FormLabel>
+                                            <div className="relative flex items-center">
+                                                <FormControl>
+                                                    <Input 
+                                                        {...field} 
+                                                        type="date" 
+                                                        value={field.value || ""} 
+                                                        className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
+                                                    />
+                                                </FormControl>
+                                                <Calendar className="absolute right-4 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         {/* Torres + Squads */}
-                        <div className="space-y-2">
+                        <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
                             <div className="flex items-center justify-between">
-                                <FormLabel className="text-sm font-medium">Torres e Squads</FormLabel>
+                                <h3 className="text-sm font-semibold text-muted-foreground">Torres e Squads</h3>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     onClick={addTorreRow}
                                     disabled={usedTorreIds.length >= torres.length || torres.length === 0}
-                                    className="h-8 text-xs"
+                                    className="h-8 text-xs rounded-full"
                                 >
                                     <Plus className="h-3.5 w-3.5 mr-1" />
                                     Adicionar Torre
@@ -512,7 +537,7 @@ export function ContratoForm({
                             </div>
 
                             {torreSelections.length === 0 ? (
-                                <p className="text-sm text-muted-foreground rounded-lg border border-dashed px-4 py-3 text-center">
+                                <p className="text-sm text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-center">
                                     Nenhuma torre vinculada. Clique em "Adicionar Torre" para associar.
                                 </p>
                             ) : (
@@ -538,10 +563,10 @@ export function ContratoForm({
                         </div>
 
                         <DialogFooter className="gap-2 mt-4">
-                            <Button type="button" variant="outline" onClick={onClose}>
+                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full">
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isLoading}>
+                            <Button type="submit" disabled={isLoading} className="rounded-full">
                                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Cadastrar"}
                             </Button>
                         </DialogFooter>

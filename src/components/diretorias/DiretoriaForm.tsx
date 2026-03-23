@@ -91,65 +91,70 @@ export function DiretoriaForm({
     return (
         <Form {...form}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="nome"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nome da Diretoria *</FormLabel>
-                            <FormControl>
-                                <Input {...field} placeholder="Ex: Tecnologia" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-4">Informações Gerais</h3>
+                    
+                    <FormField
+                        control={form.control}
+                        name="nome"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nome da Diretoria *</FormLabel>
+                                <FormControl>
+                                    <Input {...field} placeholder="Ex: Tecnologia" />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                <FormField
-                    control={form.control}
-                    name="descricao"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Descrição</FormLabel>
-                            <FormControl>
-                                <Textarea
-                                    {...field}
-                                    placeholder="Breve descrição da diretoria..."
-                                    rows={3}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                    <FormField
+                        control={form.control}
+                        name="descricao"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Descrição</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        {...field}
+                                        placeholder="Breve descrição da diretoria..."
+                                        rows={3}
+                                        className="rounded-2xl"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                <FormField
-                    control={form.control}
-                    name="lideres"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Líderes</FormLabel>
-                            <p className="text-xs text-muted-foreground -mt-1">
-                                C-levels e Diretores ativos. Diretores de áreas vinculadas são adicionados automaticamente.
-                            </p>
-                            <FormControl>
-                                <LideresAutocomplete
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    options={colaboradores}
-                                    isLoading={isColabsLoading}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                    <FormField
+                        control={form.control}
+                        name="lideres"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Líderes</FormLabel>
+                                <p className="text-xs text-muted-foreground -mt-1">
+                                    C-levels e Diretores ativos. Diretores de áreas vinculadas são adicionados automaticamente.
+                                </p>
+                                <FormControl>
+                                    <LideresAutocomplete
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        options={colaboradores}
+                                        isLoading={isColabsLoading}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={onCancel}>
+                    <Button type="button" variant="outline" onClick={onCancel} className="rounded-full">
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading} className="rounded-full">
                         {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Cadastrar"}
                     </Button>
                 </div>

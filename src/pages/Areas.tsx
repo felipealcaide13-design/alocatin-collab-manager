@@ -510,7 +510,7 @@ export default function Areas() {
 
             {/* Diretoria form */}
             <Dialog open={dirFormOpen} onOpenChange={(v) => { if (!v) { setDirFormOpen(false); setDirEditTarget(null); } }}>
-                <DialogContent>
+                <DialogContent className="max-w-lg bg-muted border-0 shadow-lg">
                     <DialogHeader>
                         <DialogTitle>{dirEditTarget ? "Editar Diretoria" : "Nova Diretoria"}</DialogTitle>
                     </DialogHeader>

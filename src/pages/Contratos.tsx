@@ -213,55 +213,56 @@ export default function Contratos() {
             title="Projetos Contratuais"
             subtitle={isLoading ? "Carregando..." : `${filtered.length} contrato(s) encontrado(s)`}
             action={
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={handleExportCSV}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exportar
-                    </Button>
-                    <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Novo Contrato
-                    </Button>
-                </div>
+                <Button variant="outline" className="rounded-full bg-[#E1ECF0] text-[#08526E] border-none hover:bg-[#d0e0e6] font-medium" onClick={handleExportCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                </Button>
             }
         >
       {/* Main container */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Todos os status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos os status</SelectItem>
-                            {CONTRATO_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+      <div className="bg-white rounded-[24px] p-4 sm:p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
+        {/* Filters and New Button Row */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <Button onClick={() => { setEditTarget(null); setFormOpen(true); }} className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Contrato
+            </Button>
+            
+            <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
+                    <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
+                        <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos os status</SelectItem>
+                        {CONTRATO_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                </Select>
 
-                    <Select value={filterCliente} onValueChange={(v) => { setFilterCliente(v); setPage(1); }}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Todos clientes" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos clientes</SelectItem>
-                            {uniqueClientes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                <Select value={filterCliente} onValueChange={(v) => { setFilterCliente(v); setPage(1); }}>
+                    <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
+                        <SelectValue placeholder="Todos clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos clientes</SelectItem>
+                        {uniqueClientes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                </Select>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por nome ou cliente..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            className="pl-9 bg-muted border-0 rounded-full"
-                        />
-                    </div>
+                <div className="relative w-full md:w-[260px]">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar por nome ou cliente..."
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        className="pl-9 bg-[#F5F5F5] border-[#E0E0E0] border rounded-full h-10"
+                    />
                 </div>
+            </div>
+        </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-[16px] border border-muted shadow-sm overflow-hidden">
+        {/* Table container */}
+        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
