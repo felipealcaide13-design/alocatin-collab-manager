@@ -200,7 +200,7 @@ export default function EstruturaOrg() {
                 font-size:10px;
                 color:${colors.text};
                 opacity:0.75;
-                text-transform:uppercase;
+                letter-spacing:0.02em;
                 letter-spacing:0.05em;
                 margin-bottom:2px;
                 white-space:nowrap;

@@ -31,14 +31,14 @@ export function AppLayout({ children }: AppLayoutProps) {
             to={to}
             onClick={() => setMobileOpen(false)}
             className={cn(
-              "sidebar-nav-item",
+              "sidebar-nav-item mb-1",
               active
-                ? "bg-[var(--primary-800)] text-white border-l-2 border-[var(--primary-600)]"
-                : "text-white/70 hover:bg-[var(--primary-800)]/60 hover:text-white"
+                ? "bg-[var(--primary-800)]/80 text-white shadow-sm"
+                : "text-white/60 hover:bg-[var(--primary-800)]/40 hover:text-white"
             )}
           >
-            <Icon size={18} />
-            {(sidebarOpen || mobileOpen) && <span>{label}</span>}
+            <Icon size={18} className={cn(active && "text-[var(--primary-600)]")} />
+            {(sidebarOpen || mobileOpen) && <span className="font-medium tracking-wide">{label}</span>}
           </Link>
         );
       })}
@@ -64,8 +64,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
           {sidebarOpen && (
-            <span className="font-bold text-lg tracking-tight">
-              <span className="text-[#72CADF]">Aloca</span><span className="text-white">tin</span>
+            <span className="font-extrabold text-xl tracking-tighter">
+              <span className="text-[var(--primary-600)]">Aloca</span><span className="text-white">tin</span>
             </span>
           )}
           <button
@@ -93,8 +93,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
-          <span className="font-bold text-lg tracking-tight">
-            <span className="text-[#72CADF]">Aloca</span><span className="text-white">tin</span>
+          <span className="font-extrabold text-xl tracking-tighter">
+            <span className="text-[var(--primary-600)]">Aloca</span><span className="text-white">tin</span>
           </span>
           <button onClick={() => setMobileOpen(false)} className="text-white/70 hover:text-white hover:bg-[var(--primary-800)]/60 p-1 rounded-md transition-colors">
             <X size={18} />

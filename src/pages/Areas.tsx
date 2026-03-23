@@ -106,6 +106,7 @@ export default function Areas() {
                 area_ids: c.area_ids ?? [],
                 especialidade_id: c.especialidade_id ?? null,
                 squad_ids: c.squad_ids ?? [],
+                torre_ids: c.torre_ids ?? [],
                 senioridade: c.senioridade,
                 status: c.status,
                 dataAdmissao: c.data_admissao,
@@ -364,6 +365,9 @@ export default function Areas() {
                 </Button>
             }
         >
+            {/* Main container */}
+            <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
+            
             {/* Actions bar */}
             <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-2 ml-auto">
@@ -501,6 +505,7 @@ export default function Areas() {
                                 )}
                             </>
                         )}
+            </div>
             </div>
 
             {/* Diretoria form */}

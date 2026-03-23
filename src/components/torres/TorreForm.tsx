@@ -175,7 +175,7 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                             {/* Dynamic leadership fields */}
                             {buConfig && buConfig.campos_lideranca.length > 0 && (
                                 <div className="sm:col-span-2 space-y-4">
-                                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Liderança</h3>
+                                    <h3 className="text-sm font-semibold text-muted-foreground">Liderança</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {buConfig.campos_lideranca.map((campo) => {
                                             const opcoes = colaboradores.filter((c) =>

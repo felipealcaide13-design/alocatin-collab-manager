@@ -24,6 +24,8 @@ import { BUTorreConfig, BUFormConfig, CampoLiderancaConfig } from "@/types/confi
 
 interface Props {
   businessUnits: Array<{ id: string; nome: string }>;
+  defaultTab?: "bu" | "torre";
+  hideTabs?: boolean;
 }
 
 // Reusable leadership fields manager
@@ -72,7 +74,7 @@ function LiderancaSection({ campos, diretorias, onChange }: LiderancaSectionProp
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+      <h3 className="text-sm font-semibold text-muted-foreground mb-3">
         Campos de Liderança
       </h3>
 
@@ -147,7 +149,7 @@ function LiderancaSection({ campos, diretorias, onChange }: LiderancaSectionProp
   );
 }
 
-export function BUTorreConfigTab({ businessUnits }: Props) {
+export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs = false }: Props) {
   const { toast } = useToast();
   const [diretorias, setDiretorias] = useState<Array<{ id: string; nome: string }>>([]);
 
@@ -213,11 +215,13 @@ export function BUTorreConfigTab({ businessUnits }: Props) {
   }
 
   return (
-    <Tabs defaultValue="torre" className="space-y-4">
-      <TabsList className="bg-muted/40 border">
-        <TabsTrigger value="torre">Configuração de Torre</TabsTrigger>
-        <TabsTrigger value="bu">Configuração de BU</TabsTrigger>
-      </TabsList>
+    <Tabs defaultValue={defaultTab} key={defaultTab} className="space-y-4">
+      {!hideTabs && (
+        <TabsList className="bg-muted/40 border">
+          <TabsTrigger value="torre">Configuração de Torre</TabsTrigger>
+          <TabsTrigger value="bu">Configuração de BU</TabsTrigger>
+        </TabsList>
+      )}
 
       {/* ── TORRE CONFIG ── */}
       <TabsContent value="torre" className="space-y-6 outline-none">
@@ -250,7 +254,7 @@ export function BUTorreConfigTab({ businessUnits }: Props) {
         {selectedBuId && !torreLoading && torreConfig && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Campos Fixos</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Campos Fixos</h3>
               <div className="flex flex-wrap gap-3">
                 <Card className="border-dashed">
                   <CardContent className="flex items-center gap-2 px-4 py-3">
@@ -300,7 +304,7 @@ export function BUTorreConfigTab({ businessUnits }: Props) {
         ) : (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Campos Fixos</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Campos Fixos</h3>
               <Card className="border-dashed w-fit">
                 <CardContent className="flex items-center gap-2 px-4 py-3">
                   <Lock className="h-4 w-4 text-muted-foreground" />

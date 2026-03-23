@@ -27,7 +27,7 @@ const TIPO_EVENTO_LABEL: Record<string, string> = {
 };
 
 const ENTIDADE_CONFIG: Record<EntidadeTipo, { label: string; color: string; icon: React.ReactNode }> = {
-  bu: { label: "BU", color: "bg-blue-100 text-blue-700 border-blue-200", icon: <Layers className="h-3 w-3" /> },
+  bu: { label: "BU", color: "bg-[var(--primary-100)] text-[var(--primary-800)] border-[var(--primary-600)]", icon: <Layers className="h-3 w-3" /> },
   torre: { label: "Torre", color: "bg-green-100 text-green-700 border-green-200", icon: <Building2 className="h-3 w-3" /> },
   squad: { label: "Squad", color: "bg-orange-100 text-orange-700 border-orange-200", icon: <Network className="h-3 w-3" /> },
 };
@@ -151,7 +151,7 @@ export function BUHistoricoTab() {
         <div className="space-y-6">
           {diasOrdenados.map((dia) => (
             <div key={dia}>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">{dia}</div>
+              <div className="text-xs font-semibold text-muted-foreground mb-2 px-1">{dia}</div>
               <div className="bg-card rounded-xl border shadow-sm divide-y">
                 {grupos[dia].map((evento) => {
                   const cfg = ENTIDADE_CONFIG[evento.entidade_tipo];

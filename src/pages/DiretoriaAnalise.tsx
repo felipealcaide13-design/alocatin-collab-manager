@@ -125,7 +125,7 @@ function nodeContent(d: any): string {
       <div style="overflow:hidden;flex:1;">
         <div style="
           font-size:10px;color:${colors.text};opacity:0.75;
-          text-transform:uppercase;letter-spacing:0.05em;
+          letter-spacing:0.02em;
           margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
         ">${isRoot ? "Diretoria" : d.data.senioridade}</div>
         <div style="

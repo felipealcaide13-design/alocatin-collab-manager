@@ -17,7 +17,7 @@ interface LideresAutocompleteProps {
 }
 
 const SENIORITY_BADGE: Record<string, string> = {
-  "Diretor(a)": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  "Diretor(a)": "bg-[var(--primary-100)] text-[var(--primary-800)] dark:bg-[var(--primary-900)] dark:text-[var(--primary-100)]",
   "Head":       "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
   "Gerente":    "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
 };

@@ -22,7 +22,7 @@ function getGreeting(): string {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 mb-3">
+    <p className="text-xs font-semibold text-muted-foreground flex items-center gap-2 mb-3">
       <span className="w-1 h-4 bg-[var(--primary-600)] rounded-full inline-block" />
       {children}
     </p>

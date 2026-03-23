@@ -250,7 +250,7 @@ function nodeContent(d: any): string {
     "<div style='display:flex;align-items:center;gap:10px;height:" + NODE_BASE_H + "px;'>" +
     "<div style='width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:" + c.text + ";flex-shrink:0;'>" + initials + "</div>" +
     "<div style='overflow:hidden;flex:1;'>" +
-    "<div style='display:inline-block;font-size:9px;font-weight:600;color:" + c.text + ";background:" + c.badge + ";border-radius:4px;padding:1px 5px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;'>" + label + "</div>" +
+    "<div style='display:inline-block;font-size:9px;font-weight:600;color:" + c.text + ";background:" + c.badge + ";border-radius:4px;padding:1px 5px;letter-spacing:0.02em;margin-bottom:3px;'>" + label + "</div>" +
     "<div style='font-size:13px;font-weight:600;color:" + c.text + ";white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>" + d.data.name + "</div>" +
     subtitleHtml +
     "</div>" +

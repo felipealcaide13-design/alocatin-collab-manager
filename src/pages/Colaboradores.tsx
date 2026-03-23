@@ -156,19 +156,10 @@ export default function Colaboradores() {
         </Button>
       }
     >
-      {/* Filters */}
-      <FilterBar>
+      {/* Main container */}
+      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9"
-            />
-          </div>
-
           <Select value={filterDiretoria} onValueChange={(v) => { setFilterDiretoria(v); setFilterArea("all"); setFilterEspecialidade("all"); setPage(1); }}>
             <SelectTrigger>
               <SelectValue placeholder="Todas as diretorias" />
@@ -209,11 +200,20 @@ export default function Colaboradores() {
               <SelectItem value="Desligado">Desligado</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </FilterBar>
 
-      {/* Table */}
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-9 bg-muted border-0 rounded-full"
+            />
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-[16px] border border-muted shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -326,6 +326,7 @@ export default function Colaboradores() {
             </div>
           </div>
         )}
+      </div>
       </div>
 
       {/* New colaborador form */}

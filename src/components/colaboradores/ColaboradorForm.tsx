@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useMemo, useRef } from "react";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Calendar } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -73,7 +73,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     resolver: zodResolver(schema),
     defaultValues: {
       nomeCompleto: "", email: "", documento: "",
-      senioridade: "Analista pleno",
+      senioridade: "C-level",
       diretoria_id: null, area_ids: [], especialidade_id: null, squad_ids: [],
       bu_id: null, torre_ids: [], lider_id: null,
       status: "Ativo",
@@ -235,7 +235,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     } else {
       form.reset({
         nomeCompleto: "", email: "", documento: "",
-        senioridade: "Analista pleno",
+        senioridade: "C-level",
         diretoria_id: null, area_ids: [], especialidade_id: null, squad_ids: [],
         bu_id: null, torre_ids: [], lider_id: null,
         status: "Ativo",
@@ -327,7 +327,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-muted border-0 shadow-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar Colaborador" : "Novo Colaborador"}</DialogTitle>
         </DialogHeader>
@@ -345,12 +345,20 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* ── Bloco 1: Identificação ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* ── Bloco 1: Identificação, Admissão, Status e Senioridade ── */}
+            <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
               <FormField control={form.control} name="nomeCompleto" render={({ field }) => (
-                <FormItem className="sm:col-span-2">
+                <FormItem>
                   <FormLabel>Nome Completo *</FormLabel>
                   <FormControl><Input {...field} placeholder="Ex: João Silva" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="documento" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF</FormLabel>
+                  <FormControl><Input {...field} placeholder="000.000.000-00" disabled={isDesligado} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -363,152 +371,178 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="documento" render={({ field }) => (
+              <FormField control={form.control} name="dataAdmissao" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CPF</FormLabel>
-                  <FormControl><Input {...field} placeholder="000.000.000-00" disabled={isDesligado} /></FormControl>
+                  <FormLabel>Data de Admissão *</FormLabel>
+                  <div className="relative flex items-center">
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="date" 
+                        disabled={isDesligado} 
+                        className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
+                      />
+                    </FormControl>
+                    <Calendar className="absolute right-4 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Ativo">Ativo</SelectItem>
+                      <SelectItem value="Desligado">Desligado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="senioridade" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senioridade *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isDesligado}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SENIORIDADES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
 
-            {/* ══ GRUPO 1: Cargo e Estrutura Organizacional ══ */}
-            <FormField control={form.control} name="senioridade" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Senioridade *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isDesligado}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {SENIORIDADES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            {senioridade && (
-              <FormField control={form.control} name="diretoria_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Diretoria</FormLabel>
-                  <Select
-                    onValueChange={(v) => { field.onChange(v === "nenhuma" ? null : v); form.setValue("area_ids", []); }}
-                    value={field.value ?? ""}
-                    disabled={isDesligado}
-                  >
-                    <FormControl>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                      {diretorias.map((d: Diretoria) => (
-                        <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
-
-            {showArea && (
-              <FormField control={form.control} name="area_ids" render={() => (
-                <FormItem>
-                  <FormLabel>
-                    {multiArea ? "Áreas" : "Área"}
-                    {multiArea && <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>}
-                  </FormLabel>
-                  {areaIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {areaIds.map((id) => {
-                        const area = allAreas.find((a: AreaEntity) => a.id === id);
-                        return (
-                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                            {area?.nome ?? id}
-                            <button type="button" onClick={() => toggleArea(id)} className="hover:text-destructive">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <Select onValueChange={(v) => toggleArea(v)} value="" disabled={isDesligado}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {areasDaDiretoria
-                        .filter((a: AreaEntity) => !areaIds.includes(a.id))
-                        .map((a: AreaEntity) => (
-                          <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+            {/* ══ GRUPO 1: Corporativo ══ */}
+            <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+              {senioridade && (
+                <FormField control={form.control} name="diretoria_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Diretoria</FormLabel>
+                    <Select
+                      onValueChange={(v) => { field.onChange(v === "nenhuma" ? null : v); form.setValue("area_ids", []); }}
+                      value={field.value ?? ""}
+                      disabled={isDesligado}
+                    >
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                        {diretorias.map((d: Diretoria) => (
+                          <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
 
-            {showEspecialidade && singleAreaId && especialidades.length > 0 && (
-              <FormField control={form.control} name="especialidade_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Especialidade</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
-                    value={field.value ?? ""}
-                    disabled={isDesligado}
-                  >
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                      {especialidades.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+              {showArea && (
+                <FormField control={form.control} name="area_ids" render={() => (
+                  <FormItem>
+                    <FormLabel>
+                      {multiArea ? "Áreas" : "Área"}
+                      {multiArea && <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>}
+                    </FormLabel>
+                    {areaIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {areaIds.map((id) => {
+                          const area = allAreas.find((a: AreaEntity) => a.id === id);
+                          return (
+                            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                              {area?.nome ?? id}
+                              <button type="button" onClick={() => toggleArea(id)} className="hover:text-destructive">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <Select onValueChange={(v) => toggleArea(v)} value="" disabled={isDesligado}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {areasDaDiretoria
+                          .filter((a: AreaEntity) => !areaIds.includes(a.id))
+                          .map((a: AreaEntity) => (
+                            <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
 
-            {senioridade !== "C-level" && (
-              <FormField control={form.control} name="lider_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Líder direto
-                    <span className="text-xs text-muted-foreground ml-1">(opcional)</span>
-                  </FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(v === "nenhum" ? null : v)}
-                    value={field.value ?? ""}
-                    disabled={isDesligado}
-                  >
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="nenhum">Nenhum</SelectItem>
-                      {liderCandidatos.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.nomeCompleto}
-                          <span className="text-muted-foreground ml-1 text-xs">({c.senioridade})</span>
-                        </SelectItem>
-                      ))}
-                      {liderCandidatos.length === 0 && (
-                        <SelectItem value="nenhum" disabled>Nenhum candidato encontrado</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+              {showEspecialidade && singleAreaId && especialidades.length > 0 && (
+                <FormField control={form.control} name="especialidade_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Especialidade</FormLabel>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
+                      value={field.value ?? ""}
+                      disabled={isDesligado}
+                    >
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                        {especialidades.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+
+              {senioridade !== "C-level" && (
+                <FormField control={form.control} name="lider_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Líder direto
+                      <span className="text-xs text-muted-foreground ml-1">(opcional)</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "nenhum" ? null : v)}
+                      value={field.value ?? ""}
+                      disabled={isDesligado}
+                    >
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
+                        {liderCandidatos.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nomeCompleto}
+                            <span className="text-muted-foreground ml-1 text-xs">({c.senioridade})</span>
+                          </SelectItem>
+                        ))}
+                        {liderCandidatos.length === 0 && (
+                          <SelectItem value="nenhum" disabled>Nenhum candidato encontrado</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+            </div>
 
             {/* ══ GRUPO 2: Alocação (BU → Torre → Squad) ══ */}
             {(showBU || showTorre || showSquad) && (
-              <div className="space-y-4 rounded-lg border p-4">
-                <p className="text-sm font-medium text-muted-foreground">Alocação</p>
-
+              <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
                 {showBU && (
                   <FormField control={form.control} name="bu_id" render={({ field }) => (
                     <FormItem>
@@ -617,33 +651,6 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                 )}
               </div>
             )}
-
-            {/* ── Bloco 9: Status e Data ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Ativo">Ativo</SelectItem>
-                      <SelectItem value="Desligado">Desligado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="dataAdmissao" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Admissão *</FormLabel>
-                  <FormControl><Input {...field} type="date" disabled={isDesligado} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
 
             {isDesligado && (
               <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">

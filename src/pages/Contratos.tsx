@@ -225,19 +225,10 @@ export default function Contratos() {
                 </div>
             }
         >
-            {/* Filters */}
-            <FilterBar>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por nome ou cliente..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            className="pl-9"
-                        />
-                    </div>
-
+      {/* Main container */}
+      <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
                         <SelectTrigger>
                             <SelectValue placeholder="Todos os status" />
@@ -257,11 +248,20 @@ export default function Contratos() {
                             {uniqueClientes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                     </Select>
+
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar por nome ou cliente..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            className="pl-9 bg-muted border-0 rounded-full"
+                        />
+                    </div>
                 </div>
-            </FilterBar>
 
             {/* Table */}
-            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+            <div className="bg-white rounded-[16px] border border-muted shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -409,6 +409,7 @@ export default function Contratos() {
                         </div>
                     </div>
                 )}
+            </div>
             </div>
 
             {/* Modals */}

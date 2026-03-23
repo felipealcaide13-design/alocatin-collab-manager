@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, Building2, Network, Eye, Layers, GitBranch, ChevronUp, ChevronDown, ChevronsUpDown, History } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, Building2, Network, Eye, Layers, GitBranch, ChevronUp, ChevronDown, ChevronsUpDown, History, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
 
@@ -26,9 +27,7 @@ import { DeleteConfirmDialog as TorreDeleteDialog } from "@/components/torres/De
 import { BusinessUnitForm } from "@/components/business-units/BusinessUnitForm";
 import { BusinessUnitDetailPanel } from "@/components/business-units/BusinessUnitDetailPanel";
 import { DeleteConfirmDialog as BUDeleteDialog } from "@/components/business-units/DeleteConfirmDialog";
-import { BUOrgChart } from "@/components/business-units/BUOrgChart";
 import { BUTorreConfigTab } from "@/components/business-units/BUTorreConfigTab";
-import { BUHistoricoTab } from "@/components/business-units/BUHistoricoTab";
 
 import { type Torre, type Squad } from "@/types/torre";
 import { type BusinessUnit } from "@/types/businessUnit";
@@ -39,8 +38,10 @@ export default function BusinessUnits() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") ?? "bus");
+    const [configModalOpen, setConfigModalOpen] = useState(false);
 
     // BU state
     const [searchBU, setSearchBU] = useState("");
@@ -313,56 +314,52 @@ export default function BusinessUnits() {
     const paginatedSquads = filteredSquads.slice((pageSquad - 1) * PAGE_SIZE, pageSquad * PAGE_SIZE);
 
     return (
-        <PageLayout title="Business Units" subtitle="Gerencie BUs, Torres e Squads.">
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList className="bg-card border shadow-sm">
-                    <TabsTrigger value="bus" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <PageLayout
+            title="Business Units"
+            subtitle="Gerencie BUs, Torres e Squads."
+            action={
+                <div className="flex gap-4 items-center">
+                    <Button variant="soft" className="rounded-full" onClick={() => navigate("/business-units/organograma")}>
+                        <GitBranch className="h-4 w-4" /> Organograma
+                    </Button>
+                    <Button variant="soft" className="rounded-full" onClick={() => navigate("/business-units/historico")}>
+                        <History className="h-4 w-4" /> Histórico
+                    </Button>
+                </div>
+            }
+        >
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList>
+                    <TabsTrigger value="bus">
                         <Layers className="mr-2 h-4 w-4" /> BUs
                     </TabsTrigger>
-                    <TabsTrigger value="torres" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger value="torres">
                         <Building2 className="mr-2 h-4 w-4" /> Torres
                     </TabsTrigger>
-                    <TabsTrigger value="squads" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    <TabsTrigger value="squads">
                         <Network className="mr-2 h-4 w-4" /> Squads
-                    </TabsTrigger>
-                    <TabsTrigger value="hierarquia" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                        <GitBranch className="mr-2 h-4 w-4" /> Hierarquia
-                    </TabsTrigger>
-                    <TabsTrigger value="configuracao" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                        Configuração
-                    </TabsTrigger>
-                    <TabsTrigger value="historico" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                        <History className="mr-2 h-4 w-4" /> Histórico
                     </TabsTrigger>
                 </TabsList>
 
-                {/* HIERARQUIA TAB */}
-                <TabsContent value="hierarquia" className="outline-none mt-0" style={{ height: "calc(100vh - 13.5rem)" }}>
-                    <BUOrgChart
-                        businessUnits={businessUnits}
-                        torres={torres}
-                        squads={squads}
-                        colaboradores={colaboradores}
-                        isLoading={loadingBUs || loadingTorres || loadingSquads}
-                        layout={chartLayout}
-                        onLayoutChange={setChartLayout}
-                    />
-                </TabsContent>
-
-                <TabsContent value="bus" className="space-y-4 outline-none">
-                    <FilterBar className="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Buscar BUs..." value={searchBU}
-                                onChange={(e) => setSearchBU(e.target.value)} className="pl-9" />
+                <TabsContent value="bus" className="outline-none">
+                    <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                            <div className="flex gap-4 w-full sm:w-auto">
+                                <Button className="rounded-full" onClick={() => { setEditBUTarget(null); setBuFormOpen(true); }}>
+                                    <Plus className="mr-2 h-4 w-4" /> Nova BU
+                                </Button>
+                                <Button variant="soft" size="icon" className="rounded-full" onClick={() => setConfigModalOpen(true)}>
+                                    <Settings className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="relative w-full max-w-sm shrink-0">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Buscar BUs..." value={searchBU}
+                                    onChange={(e) => setSearchBU(e.target.value)} className="pl-9 bg-muted border-0 rounded-full" />
+                            </div>
                         </div>
-                        <Button onClick={() => { setEditBUTarget(null); setBuFormOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Nova BU
-                        </Button>
-                    </FilterBar>
 
-                    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -427,22 +424,29 @@ export default function BusinessUnits() {
                             </table>
                         </div>
                     </div>
+                    </div>
                 </TabsContent>
 
                 {/* TORRES TAB */}
-                <TabsContent value="torres" className="space-y-4 outline-none">
-                    <FilterBar className="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Buscar torres..." value={searchTorre}
-                                onChange={(e) => { setSearchTorre(e.target.value); setPageTorre(1); }} className="pl-9" />
+                <TabsContent value="torres" className="outline-none">
+                    <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                            <div className="flex gap-4 w-full sm:w-auto">
+                                <Button className="rounded-full" onClick={() => { setEditTorreTarget(null); setTorreFormOpen(true); }}>
+                                    <Plus className="mr-2 h-4 w-4" /> Nova Torre
+                                </Button>
+                                <Button variant="soft" size="icon" className="rounded-full" onClick={() => setConfigModalOpen(true)}>
+                                    <Settings className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="relative w-full max-w-sm shrink-0">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Buscar torres..." value={searchTorre}
+                                    onChange={(e) => { setSearchTorre(e.target.value); setPageTorre(1); }} className="pl-9 bg-muted border-0 rounded-full" />
+                            </div>
                         </div>
-                        <Button onClick={() => { setEditTorreTarget(null); setTorreFormOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Nova Torre
-                        </Button>
-                    </FilterBar>
 
-                    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -518,46 +522,50 @@ export default function BusinessUnits() {
                             </table>
                         </div>
                     </div>
+                    </div>
                 </TabsContent>
 
                 {/* SQUADS TAB */}
-                <TabsContent value="squads" className="space-y-4 outline-none">
-                    <FilterBar className="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                            <div className="relative w-full max-w-sm">
+                <TabsContent value="squads" className="outline-none">
+                    <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
+                        <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
+                            <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+                                <Button className="rounded-full" onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
+                                    <Plus className="mr-2 h-4 w-4" /> Nova Squad
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Select value={filterSquadTorre} onValueChange={(v) => { setFilterSquadTorre(v); setPageSquad(1); }}>
+                                        <SelectTrigger className="w-[190px] rounded-full border-muted bg-transparent">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Torres</SelectItem>
+                                            {torres.map((t) => (
+                                                <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={filterSquadContrato} onValueChange={(v) => { setFilterSquadContrato(v); setPageSquad(1); }}>
+                                        <SelectTrigger className="w-[190px] rounded-full border-muted bg-transparent">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Contratos</SelectItem>
+                                            {contratos.map((c) => (
+                                                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="relative w-full xl:max-w-sm shrink-0">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input placeholder="Buscar squads..." value={searchSquad}
-                                    onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }} className="pl-9" />
+                                    onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
-                            <Select value={filterSquadTorre} onValueChange={(v) => { setFilterSquadTorre(v); setPageSquad(1); }}>
-                                <SelectTrigger className="w-full sm:w-44">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas as Torres</SelectItem>
-                                    {torres.map((t) => (
-                                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select value={filterSquadContrato} onValueChange={(v) => { setFilterSquadContrato(v); setPageSquad(1); }}>
-                                <SelectTrigger className="w-full sm:w-44">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos os Contratos</SelectItem>
-                                    {contratos.map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
                         </div>
-                        <Button onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
-                            <Plus className="mr-2 h-4 w-4" /> Nova Squad
-                        </Button>
-                    </FilterBar>
 
-                    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -627,18 +635,23 @@ export default function BusinessUnits() {
                             </table>
                         </div>
                     </div>
-                </TabsContent>
-
-                {/* CONFIGURAÇÃO TAB */}
-                <TabsContent value="configuracao" className="space-y-4 outline-none">
-                    <BUTorreConfigTab businessUnits={businessUnits} />
-                </TabsContent>
-
-                {/* HISTÓRICO TAB */}
-                <TabsContent value="historico" className="space-y-4 outline-none">
-                    <BUHistoricoTab />
+                    </div>
                 </TabsContent>
             </Tabs>
+
+            <Dialog open={configModalOpen} onOpenChange={setConfigModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto w-[90vw]">
+                    <DialogHeader>
+                        <DialogTitle>{activeTab === "bus" ? "Configuração de BU" : "Configuração de Torre"}</DialogTitle>
+                        <DialogDescription>
+                            Configure os campos que serão solicitados no formulário.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {configModalOpen && (
+                        <BUTorreConfigTab businessUnits={businessUnits} defaultTab={activeTab === "bus" ? "bu" : "torre"} hideTabs={true} />
+                    )}
+                </DialogContent>
+            </Dialog>
             <BusinessUnitForm
                 open={buFormOpen}
                 onClose={() => { setBuFormOpen(false); setEditBUTarget(null); }}

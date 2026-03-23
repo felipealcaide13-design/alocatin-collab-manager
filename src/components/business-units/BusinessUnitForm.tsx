@@ -123,7 +123,7 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
             {/* Dynamic leadership fields */}
             {configLoaded && buFormConfig.campos_lideranca.length > 0 && (
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Liderança</p>
+                <p className="text-sm font-semibold text-muted-foreground">Liderança</p>
                 {buFormConfig.campos_lideranca.map((campo) => {
                   const opcoes = colaboradores.filter((c) =>
                     c.senioridade === campo.senioridade &&

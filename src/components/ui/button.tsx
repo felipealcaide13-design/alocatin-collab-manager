@@ -10,14 +10,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-[var(--primary-700)]",
-        destructive:
-          "bg-[var(--color-danger)] text-white hover:bg-red-700 focus-visible:ring-red-500",
-        outline:
-          "border border-[var(--primary-600)] text-[var(--primary-700)] bg-transparent hover:bg-[var(--primary-50)] hover:text-[var(--primary-800)]",
-        secondary:
-          "bg-[var(--primary-100)] text-[var(--primary-800)] hover:bg-[var(--primary-600)] hover:text-white",
-        ghost:
-          "hover:bg-[var(--primary-50)] hover:text-[var(--primary-800)]",
+        destructive: "bg-[var(--color-danger)] text-white hover:bg-red-700 focus-visible:ring-red-500",
+        outline: "border border-[var(--primary-600)] text-[var(--primary-700)] bg-transparent hover:bg-[var(--primary-50)] hover:text-[var(--primary-800)]",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        soft: "bg-[#e1ecf0] text-[#0a678a] hover:bg-[#d1e0e5] font-medium",
+        ghost: "hover:bg-[var(--primary-50)] hover:text-[var(--primary-800)]",
         link: "text-[var(--primary-600)] underline-offset-4 hover:underline hover:text-[var(--primary-700)]",
       },
       size: {

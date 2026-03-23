@@ -12,6 +12,8 @@ import DiretoriaAnalise from "./pages/DiretoriaAnalise";
 import OrgChartPage from "./pages/OrgChartPage";
 import Contratos from "./pages/Contratos";
 import BusinessUnits from "./pages/BusinessUnits";
+import BusinessUnitsOrganograma from "./pages/BusinessUnitsOrganograma";
+import BusinessUnitsHistorico from "./pages/BusinessUnitsHistorico";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -33,6 +35,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/business-units" element={<BusinessUnits />} />
+            <Route path="/business-units/organograma" element={<BusinessUnitsOrganograma />} />
+            <Route path="/business-units/historico" element={<BusinessUnitsHistorico />} />
             <Route path="/contratos" element={<Contratos />} />
             <Route path="/colaboradores" element={<Colaboradores />} />
             <Route path="/colaboradores/:id" element={<ColaboradorDetail />} />

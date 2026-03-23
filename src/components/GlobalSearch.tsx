@@ -13,7 +13,7 @@ type ResultItem = {
 };
 
 const typeConfig = {
-  colaborador: { icon: Users, color: "text-blue-500", label: "Colaborador" },
+  colaborador: { icon: Users, color: "text-[var(--primary-600)]", label: "Colaborador" },
   contrato: { icon: FileText, color: "text-green-500", label: "Contrato" },
   squad: { icon: Layers, color: "text-purple-500", label: "Squad" },
   torre: { icon: Building2, color: "text-orange-500", label: "Torre" },
@@ -163,12 +163,12 @@ export function GlobalSearch() {
           onFocus={() => results.length > 0 && setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Buscar colaborador, contrato, squad ou torre..."
-          className="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+          className="w-full pl-9 pr-4 py-2 text-sm rounded-full border-0 bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background placeholder:text-muted-foreground"
         />
       </div>
 
       {open && (
-        <div className="absolute top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full mt-2 w-full bg-popover border border-border rounded-xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] z-50 overflow-hidden">
           {loading ? (
             <div className="px-4 py-3 text-sm text-muted-foreground">Buscando...</div>
           ) : results.length === 0 ? (

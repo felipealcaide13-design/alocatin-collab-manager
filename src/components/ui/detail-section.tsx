@@ -13,7 +13,7 @@ export function DetailSection({ icon: Icon, title, children, action }: DetailSec
     <div className="space-y-2">
       <div>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
             <Icon className="h-3.5 w-3.5 text-[var(--primary-600)]" />
             {title}
           </p>
