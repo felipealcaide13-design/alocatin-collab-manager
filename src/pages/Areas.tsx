@@ -353,29 +353,25 @@ export default function Areas() {
         <PageLayout
             title="Diretorias"
             subtitle={isLoading ? "Carregando..." : `${diretorias.length} diretoria(s) · ${areas.length} área(s)`}
-            action={
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    title="Ver Org Chart"
-                    onClick={() => navigate("/areas/orgchart")}
-                >
-                    <Network className="h-4 w-4" />
-                </Button>
-            }
         >
             {/* Main container */}
             <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
             
             {/* Actions bar */}
-            <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2 ml-auto">
-                    <Button onClick={() => { setDirEditTarget(null); setDirFormOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nova Diretoria
-                    </Button>
-                </div>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Button onClick={() => { setDirEditTarget(null); setDirFormOpen(true); }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Diretoria
+                </Button>
+                <Button
+                    variant="soft"
+                    className="h-9 px-4 rounded-full gap-2"
+                    title="Ver Organograma Empresarial"
+                    onClick={() => navigate("/areas/orgchart")}
+                >
+                    <Network className="h-4 w-4" />
+                    Organograma Empresarial
+                </Button>
             </div>
 
             {/* Accordion list */}

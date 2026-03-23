@@ -1,8 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Menu, X, Layers, FileText, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, Menu, X, Layers, FileText, Building2, LogOut } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
@@ -20,6 +29,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
+
+  const userInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : "??";
 
   const NavLinks = () => (
     <nav className="flex flex-col gap-1 mt-4">
@@ -118,9 +130,27 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex-1">
             <GlobalSearch />
           </div>
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold shrink-0">
-            A
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-8 w-8 rounded-full bg-[var(--primary-600)] flex items-center justify-center text-white text-sm font-semibold shrink-0 hover:bg-[var(--primary-700)] transition-colors">
+                {userInitials}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">Minha Conta</span>
+                <span className="text-xs font-normal text-muted-foreground truncate">{user?.email}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={signOut}
+                className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950 cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <main className="flex-1 p-4 md:p-6 animate-fade-in overflow-auto">

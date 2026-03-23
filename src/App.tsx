@@ -15,6 +15,23 @@ import BusinessUnits from "./pages/BusinessUnits";
 import BusinessUnitsOrganograma from "./pages/BusinessUnitsOrganograma";
 import BusinessUnitsHistorico from "./pages/BusinessUnitsHistorico";
 import NotFound from "./pages/NotFound";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Login from "./pages/Login";
+import { Navigate } from "react-router-dom";
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="h-screen w-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,27 +44,39 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppLayout>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/business-units" element={<BusinessUnits />} />
-            <Route path="/business-units/organograma" element={<BusinessUnitsOrganograma />} />
-            <Route path="/business-units/historico" element={<BusinessUnitsHistorico />} />
-            <Route path="/contratos" element={<Contratos />} />
-            <Route path="/colaboradores" element={<Colaboradores />} />
-            <Route path="/colaboradores/:id" element={<ColaboradorDetail />} />
-            <Route path="/areas" element={<Areas />} />
-            <Route path="/areas/orgchart" element={<OrgChartPage />} />
-            <Route path="/areas/diretorias/:id" element={<DiretoriaAnalise />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/business-units" element={<BusinessUnits />} />
+                      <Route path="/business-units/organograma" element={<BusinessUnitsOrganograma />} />
+                      <Route path="/business-units/historico" element={<BusinessUnitsHistorico />} />
+                      <Route path="/contratos" element={<Contratos />} />
+                      <Route path="/colaboradores" element={<Colaboradores />} />
+                      <Route path="/colaboradores/:id" element={<ColaboradorDetail />} />
+                      <Route path="/areas" element={<Areas />} />
+                      <Route path="/areas/orgchart" element={<OrgChartPage />} />
+                      <Route path="/areas/diretorias/:id" element={<DiretoriaAnalise />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </TooltipProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
