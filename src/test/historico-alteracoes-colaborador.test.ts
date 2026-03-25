@@ -144,7 +144,7 @@ describe("P2 — diffCamposRastreaveis omite campos sem mudança (Req 1.6)", () 
   it("P2 — patch com mesmos valores rastreáveis retorna array vazio", () => {
     const arbSenioridade = fc.constantFrom(
       "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-      "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior"
+      "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior"
     ) as fc.Arbitrary<Colaborador["senioridade"]>;
 
     const arbStatus = fc.constantFrom("Ativo", "Desligado") as fc.Arbitrary<Colaborador["status"]>;

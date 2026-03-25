@@ -24,7 +24,7 @@ import type { Area } from "@/types/area";
 
 const SENIORIDADES: Senioridade[] = [
   "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-  "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+  "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
 const arbUuid = fc.uuid();

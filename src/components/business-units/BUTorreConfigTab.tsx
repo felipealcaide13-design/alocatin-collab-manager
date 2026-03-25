@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Lock, ChevronUp, ChevronDown, Pencil, Trash2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,7 @@ function LiderancaSection({ campos, diretorias, onChange }: LiderancaSectionProp
 
 export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs = false }: Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [diretorias, setDiretorias] = useState<Array<{ id: string; nome: string }>>([]);
 
   // Torre config state
@@ -194,6 +196,7 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
     setTorreSaving(true);
     try {
       await configuracaoTorreService.upsert(torreConfig);
+      queryClient.invalidateQueries({ queryKey: ["configuracao_torre", torreConfig.bu_id] });
       toast({ title: "Configuração salva!", description: "Configuração de Torre salva com sucesso." });
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
@@ -206,6 +209,7 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
     setBuSaving(true);
     try {
       await configuracaoBUService.upsert(buConfig);
+      queryClient.invalidateQueries({ queryKey: ["configuracao_bu"] });
       toast({ title: "Configuração salva!", description: "Configuração de BU salva com sucesso." });
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });

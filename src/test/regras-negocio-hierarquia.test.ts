@@ -19,13 +19,13 @@ import type {
 
 const SENIORIDADES: Senioridade[] = [
   "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-  "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+  "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
 const CLEVEL_DIRETOR: Senioridade[] = ["C-level", "Diretor(a)"];
 const GESTORES: Senioridade[] = ["Head", "Gerente", "Coordenador(a)"];
-const ICS: Senioridade[] = ["Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior"];
-const STAF: Senioridade[] = ["Staf I", "Staf II"];
+const ICS: Senioridade[] = ["Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior"];
+const STAFF: Senioridade[] = ["Staff I", "Staff II"];
 const ANALISTAS: Senioridade[] = ["Analista senior", "Analista pleno", "Analista junior"];
 const SCOPES: ScopeEnum[] = ["especialidade", "area", "diretoria"];
 
@@ -92,7 +92,7 @@ function scopesPermitidos(senioridade: Senioridade): ScopeEnum[] {
   if (senioridade === "Head") return ["diretoria"];
   if (senioridade === "Gerente") return ["area"];
   if (senioridade === "Coordenador(a)") return ["area"];
-  if (STAF.includes(senioridade)) return ["area", "diretoria"];
+  if (STAFF.includes(senioridade)) return ["area", "diretoria"];
   if (ANALISTAS.includes(senioridade)) return ["especialidade"];
   return [];
 }
@@ -182,12 +182,12 @@ describe("Property 4: Scope válido por grupo de senioridade", () => {
     );
   });
 
-  it("Staf I e Staf II aceitam scope=area ou scope=diretoria", () => {
+  it("Staff I e Staff II aceitam scope=area ou scope=diretoria", () => {
     fc.assert(
       fc.property(arbScope, (scope) => {
         const esperado = scope === "area" || scope === "diretoria";
-        expect(scopeValido("Staf I", scope)).toBe(esperado);
-        expect(scopeValido("Staf II", scope)).toBe(esperado);
+        expect(scopeValido("Staff I", scope)).toBe(esperado);
+        expect(scopeValido("Staff II", scope)).toBe(esperado);
       }),
       { numRuns: 100 }
     );
@@ -447,8 +447,8 @@ describe("Casos de borda — AlocacaoInput", () => {
     expect(scopesPermitidos("Head")).toEqual(["diretoria"]);
     expect(scopesPermitidos("Gerente")).toEqual(["area"]);
     expect(scopesPermitidos("Coordenador(a)")).toEqual(["area"]);
-    expect(scopesPermitidos("Staf I")).toEqual(["area", "diretoria"]);
-    expect(scopesPermitidos("Staf II")).toEqual(["area", "diretoria"]);
+    expect(scopesPermitidos("Staff I")).toEqual(["area", "diretoria"]);
+    expect(scopesPermitidos("Staff II")).toEqual(["area", "diretoria"]);
     expect(scopesPermitidos("Analista senior")).toEqual(["especialidade"]);
     expect(scopesPermitidos("Analista pleno")).toEqual(["especialidade"]);
     expect(scopesPermitidos("Analista junior")).toEqual(["especialidade"]);

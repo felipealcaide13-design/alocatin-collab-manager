@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { BusinessUnit } from "@/types/businessUnit";
-import { BUFormConfig } from "@/types/configuracaoTorre";
 import { configuracaoBUService } from "@/services/configuracaoBUService";
 import { colaboradorService } from "@/services/colaboradorService";
 
@@ -35,29 +34,16 @@ interface Props {
 export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoading }: Props) {
   const isEdit = !!initialData;
 
-  const [buFormConfig, setBuFormConfig] = useState<BUFormConfig>({ descricao_habilitada: false, campos_lideranca: [] });
-  const [configLoaded, setConfigLoaded] = useState(false);
+  const { data: buFormConfig = { descricao_habilitada: false, campos_lideranca: [] }, isSuccess: configLoaded } = useQuery({
+    queryKey: ["configuracao_bu"],
+    queryFn: () => configuracaoBUService.get(),
+    enabled: open,
+  });
 
   const { data: colaboradores = [] } = useQuery({
     queryKey: ["colaboradores"],
     queryFn: () => colaboradorService.getAll(),
   });
-
-  // Load BU form config once when dialog opens
-  const loadedRef = useRef(false);
-  useEffect(() => {
-    if (open && !loadedRef.current) {
-      loadedRef.current = true;
-      configuracaoBUService.get()
-        .then(setBuFormConfig)
-        .catch(() => {})
-        .finally(() => setConfigLoaded(true));
-    }
-    if (!open) {
-      loadedRef.current = false;
-      setConfigLoaded(false);
-    }
-  }, [open]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),

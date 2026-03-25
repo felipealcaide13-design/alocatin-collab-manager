@@ -497,8 +497,8 @@ export type Database = {
         | "Head"
         | "Gerente"
         | "Coordenador(a)"
-        | "Staf I"
-        | "Staf II"
+        | "Staff I"
+        | "Staff II"
         | "Analista senior"
         | "Analista pleno"
         | "Analista junior"
@@ -587,7 +587,7 @@ export const Constants = {
     Enums: {
       senioridade_enum: [
         "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-        "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+        "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
       ],
       status_enum: ["Ativo", "Desligado"],
       scope_enum: ["especialidade", "area", "diretoria"],

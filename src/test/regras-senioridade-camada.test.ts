@@ -135,14 +135,14 @@ describe("organograma — edge cases (Req 3.5, 3.6)", () => {
   it("nó Torre exibe Diretor(a), Head, Gerente, Coordenador(a), Staf I, Staf II, Analista senior (Req 3.2)", () => {
     const permitidosNaTorre = SENIORIDADES.filter((s) => isCamadaPermitida(s, "Torre"));
     expect(permitidosNaTorre).toEqual([
-      "Diretor(a)", "Head", "Gerente", "Coordenador(a)", "Staf I", "Staf II", "Analista senior",
+      "Diretor(a)", "Head", "Gerente", "Coordenador(a)", "Staff I", "Staff II", "Analista senior",
     ]);
   });
 
   it("nó Squad exibe Coordenador(a), Staf I, Staf II, Analista senior, Analista pleno, Analista junior (Req 3.3)", () => {
     const permitidosNoSquad = SENIORIDADES.filter((s) => isCamadaPermitida(s, "Squad"));
     expect(permitidosNoSquad).toEqual([
-      "Coordenador(a)", "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+      "Coordenador(a)", "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
     ]);
   });
 });

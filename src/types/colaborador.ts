@@ -4,8 +4,8 @@ export type Senioridade =
   | "Head"
   | "Gerente"
   | "Coordenador(a)"
-  | "Staf I"
-  | "Staf II"
+  | "Staff I"
+  | "Staff II"
   | "Analista senior"
   | "Analista pleno"
   | "Analista junior";
@@ -31,14 +31,14 @@ export interface Colaborador {
 
 export const SENIORIDADES: Senioridade[] = [
   "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-  "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+  "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
 // Grupos de senioridade para controle de UX
 export const SENIORIDADE_GRUPOS = {
   clevel_diretor: ["C-level", "Diretor(a)"] as Senioridade[],
   gestor: ["Head", "Gerente", "Coordenador(a)"] as Senioridade[],
-  ic: ["Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior"] as Senioridade[],
+  ic: ["Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior"] as Senioridade[],
 };
 
 export type ColaboradorInput = Omit<Colaborador, "id">;

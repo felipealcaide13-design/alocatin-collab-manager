@@ -41,7 +41,7 @@ const schema = z.object({
   documento: z.string().max(18).optional().or(z.literal("")),
   senioridade: z.enum([
     "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-    "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+    "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
   ]),
   diretoria_id: z.string().nullable().optional(),
   area_ids: z.array(z.string()).default([]),
@@ -86,6 +86,7 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
   const areaIds = form.watch("area_ids");
   const buId = form.watch("bu_id");
   const torreIds = form.watch("torre_ids");
+  const liderId = form.watch("lider_id");
 
   // Ref para evitar que o effect de senioridade rode no reset inicial
   const isInitializing = useRef(false);
@@ -101,10 +102,10 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
 
   // Manter lógica de área/especialidade baseada em grupos de senioridade
   const isGestor = ["Head", "Gerente", "Coordenador(a)"].includes(senioridade);
-  const isIC = ["Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior"].includes(senioridade);
+  const isIC = ["Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior"].includes(senioridade);
   const showArea = isGestor || isIC;
   const showEspecialidade = isIC;
-  const multiArea = isGestor;
+  const multiArea = ["Head", "Gerente"].includes(senioridade);
 
   // ── Queries ──────────────────────────────────────────────
   const { data: diretorias = [] } = useQuery({
@@ -145,53 +146,86 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     queryFn: () => torreService.getAllSquads().catch(() => []),
   });
 
-  // Squads filtradas pelas torres selecionadas (quando Torre é visível)
-  // Para analistas/staff (isApenasSquad) ou sem torre selecionada: todas as squads
-  const squadsDisponiveis = useMemo(() => {
-    if (isApenasSquad || torreIds.length === 0) return squads;
-    return squads.filter((s) => torreIds.includes(s.torre_id));
-  }, [squads, torreIds, isApenasSquad]);
-
-  // Torres filtradas pela BU selecionada (quando BU visível e selecionada)
-  const torresDisponiveis = useMemo(() => {
-    if (!showBU || !buId) return torres;
-    return torres.filter((t: Torre) => t.bu_id === buId);
-  }, [torres, buId, showBU]);
-
   // Todos colaboradores ativos para o select de líder
   const { data: todosColaboradores = [] } = useQuery({
     queryKey: ["colaboradores-all"],
     queryFn: () => colaboradorService.getAll().catch(() => []),
   });
 
-  // ── Candidatos a líder: cargo acima + mesma área (ou mesma diretoria) ──
+  // Torres do líder selecionado (usado para filtrar quando isApenasSquad)
+  const torresDoLider = useMemo(() => {
+    if (!liderId) return [];
+    const lider = todosColaboradores.find((c) => c.id === liderId);
+    return lider?.torre_ids ?? [];
+  }, [liderId, todosColaboradores]);
+
+  // Squads filtradas:
+  // - Se Torre visível: filtra pelas torres selecionadas pelo usuário
+  // - Se isApenasSquad + líder com torres: filtra pelas torres do líder
+  // - Caso contrário: todas as squads
+  const squadsDisponiveis = useMemo(() => {
+    if (!isApenasSquad) {
+      if (torreIds.length === 0) return squads;
+      return squads.filter((s) => torreIds.includes(s.torre_id));
+    }
+    if (torresDoLider.length > 0) {
+      return squads.filter((s) => torresDoLider.includes(s.torre_id));
+    }
+    return squads;
+  }, [squads, torreIds, isApenasSquad, torresDoLider]);
+
+  // Torres filtradas:
+  // - Se BU visível e selecionada: filtra pela BU
+  // - Se isApenasSquad + líder com torres: filtra pelas torres do líder
+  // - Caso contrário: todas as torres
+  const torresDisponiveis = useMemo(() => {
+    let base = torres;
+    if (showBU && buId) base = torres.filter((t: Torre) => t.bu_id === buId);
+    if (isApenasSquad && torresDoLider.length > 0) {
+      return base.filter((t: Torre) => torresDoLider.includes(t.id));
+    }
+    return base;
+  }, [torres, buId, showBU, isApenasSquad, torresDoLider]);
+
+  // ── Candidatos a líder: senioridade acima + mesma área > mesma diretoria > todos ──
   const liderCandidatos = useMemo(() => {
     const SENIORITY_ORDER: Senioridade[] = [
       "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-      "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+      "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
     ];
+
+    // Líder só pode ser Coordenador(a) ou acima — nunca Staff ou Analista
+    const SENIORIDADES_LIDER: Senioridade[] = ["C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)"];
+
     const myIdx = SENIORITY_ORDER.indexOf(senioridade);
     if (myIdx <= 0) return []; // C-level não tem líder
 
-    // Senioridades acima (índice menor)
+    // Interseção: acima do colaborador E dentro das senioridades permitidas para líder
     const senioridadesAcima = SENIORITY_ORDER.slice(0, myIdx);
+    const senioridadesValidas = senioridadesAcima.filter((s) => SENIORIDADES_LIDER.includes(s));
+
+    if (senioridadesValidas.length === 0) return [];
+
+    const minhasAreas = form.getValues("area_ids");
+    const minhaDiretoria = form.getValues("diretoria_id");
 
     return todosColaboradores.filter((c) => {
       if (c.status !== "Ativo") return false;
-      if (initialData && c.id === initialData.id) return false; // não pode ser líder de si mesmo
-      if (!senioridadesAcima.includes(c.senioridade)) return false;
+      if (initialData && c.id === initialData.id) return false;
+      if (!senioridadesValidas.includes(c.senioridade)) return false;
 
-      // Precisa ter ao menos uma área em comum (se o colaborador já tem áreas selecionadas)
-      const minhasAreas = form.getValues("area_ids");
-      if (minhasAreas.length > 0 && c.area_ids.length > 0) {
-        return minhasAreas.some((a) => c.area_ids.includes(a));
+      // 1. Filtra por área: se o colaborador tem áreas selecionadas,
+      //    o candidato precisa ter ao menos uma em comum
+      if (minhasAreas.length > 0) {
+        return c.area_ids.length > 0 && minhasAreas.some((a) => c.area_ids.includes(a));
       }
-      // Se ainda não selecionou área, filtra só por diretoria
-      const minhaDiretoria = form.getValues("diretoria_id");
-      if (minhaDiretoria && c.diretoria_id) {
+
+      // 2. Sem área mas com diretoria: filtra por diretoria
+      if (minhaDiretoria) {
         return c.diretoria_id === minhaDiretoria;
       }
-      // Sem área nem diretoria: mostra todos acima
+
+      // 3. Sem contexto: mostra todos com senioridade válida
       return true;
     });
   }, [senioridade, areaIds, diretoriaId, todosColaboradores, initialData]);
@@ -243,24 +277,49 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
       });
     }
     // Libera o flag após o ciclo de render
-    setTimeout(() => { isInitializing.current = false; }, 0);
+    setTimeout(() => {
+      isInitializing.current = false;
+      // Sincroniza refs de "valor anterior" com os valores carregados
+      prevDiretoriaId.current = initialData ? (initialData.diretoria_id ?? null) : null;
+      prevAreaIds.current = initialData ? (initialData.area_ids ?? []).join(",") : "";
+    }, 0);
   }, [open, initialData]);
 
-  // Reset campos de camadas quando senioridade muda (não roda no reset inicial)
+  // Ref para rastrear a diretoria anterior e detectar mudança real
+  const prevDiretoriaId = useRef<string | null | undefined>(undefined);
+
+  // Quando senioridade muda: limpa apenas camadas de alocação não permitidas
+  // Mantém área, especialidade e líder intactos
   useEffect(() => {
     if (isInitializing.current) return;
     const permitidas = getCamadasPermitidas(senioridade);
     if (!permitidas.includes("BU")) form.setValue("bu_id", null);
     if (!permitidas.includes("Torre")) form.setValue("torre_ids", []);
     if (!permitidas.includes("Squad")) form.setValue("squad_ids", []);
-    // Limpar área/especialidade/líder também
+  }, [senioridade]);
+
+  // Quando diretoria muda (pelo usuário): limpa área → especialidade → líder em cascata
+  useEffect(() => {
+    if (isInitializing.current) return;
+    // Ignora a primeira execução (sincronização inicial do ref)
+    if (prevDiretoriaId.current === undefined) {
+      prevDiretoriaId.current = diretoriaId;
+      return;
+    }
+    if (prevDiretoriaId.current === diretoriaId) return;
+    prevDiretoriaId.current = diretoriaId;
     form.setValue("area_ids", []);
     form.setValue("especialidade_id", null);
     form.setValue("lider_id", null);
-  }, [senioridade]);
+  }, [diretoriaId]);
 
-  // Reset especialidade quando área muda (IC)
+  // Quando área muda (pelo usuário): limpa especialidade
+  const prevAreaIds = useRef<string>("");
   useEffect(() => {
+    if (isInitializing.current) return;
+    const current = areaIds.join(",");
+    if (prevAreaIds.current === current) return;
+    prevAreaIds.current = current;
     if (isIC) form.setValue("especialidade_id", null);
   }, [areaIds.join(",")]);
 
@@ -270,6 +329,32 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
     form.setValue("torre_ids", []);
     form.setValue("squad_ids", []);
   }, [buId]);
+
+  // ── Auto-seleção quando há apenas uma opção disponível ────
+
+  // Especialidade: auto-seleciona se só há uma opção e nenhuma está selecionada
+  useEffect(() => {
+    if (isInitializing.current) return;
+    if (especialidades.length === 1 && !form.getValues("especialidade_id")) {
+      form.setValue("especialidade_id", especialidades[0].id);
+    }
+  }, [especialidades]);
+
+  // Squad: auto-seleciona se só há uma disponível e nenhuma está selecionada
+  useEffect(() => {
+    if (isInitializing.current) return;
+    if (squadsDisponiveis.length === 1 && form.getValues("squad_ids").length === 0) {
+      form.setValue("squad_ids", [squadsDisponiveis[0].id]);
+    }
+  }, [squadsDisponiveis]);
+
+  // Líder direto: auto-seleciona se só há um candidato e nenhum está selecionado
+  useEffect(() => {
+    if (isInitializing.current) return;
+    if (liderCandidatos.length === 1 && !form.getValues("lider_id")) {
+      form.setValue("lider_id", liderCandidatos[0].id);
+    }
+  }, [liderCandidatos]);
 
   // ── Helpers para multi-select ─────────────────────────────
   const toggleArea = (id: string) => {
@@ -292,6 +377,13 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
   };
 
   const handleSubmit = form.handleSubmit(async (values) => {
+    // Derivar camadas ativas para validação ANTES de derivar torres automaticamente
+    const camadasSelecionadas: Camada[] = [];
+    if (values.bu_id) camadasSelecionadas.push("BU");
+    // Para analistas/staff (isApenasSquad), torres são derivadas internamente — não contar como camada selecionada pelo usuário
+    if (!isApenasSquad && values.torre_ids && values.torre_ids.length > 0) camadasSelecionadas.push("Torre");
+    if (values.squad_ids && values.squad_ids.length > 0) camadasSelecionadas.push("Squad");
+
     // Para analistas/staff (só Squad): derivar torre_ids automaticamente das squads selecionadas
     if (isApenasSquad && values.squad_ids.length > 0) {
       const torresDerivadas = [
@@ -303,12 +395,6 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
       ];
       values.torre_ids = torresDerivadas;
     }
-
-    // Derivar camadas ativas para validação
-    const camadasSelecionadas: Camada[] = [];
-    if (values.bu_id) camadasSelecionadas.push("BU");
-    if (values.torre_ids && values.torre_ids.length > 0) camadasSelecionadas.push("Torre");
-    if (values.squad_ids && values.squad_ids.length > 0) camadasSelecionadas.push("Squad");
 
     if (camadasSelecionadas.length > 0) {
       const resultado = validarCamadasPorSenioridade(values.senioridade, camadasSelecionadas);
@@ -456,31 +542,49 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                       {multiArea ? "Áreas" : "Área"}
                       {multiArea && <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>}
                     </FormLabel>
-                    {areaIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {areaIds.map((id) => {
-                          const area = allAreas.find((a: AreaEntity) => a.id === id);
-                          return (
-                            <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                              {area?.nome ?? id}
-                              <button type="button" onClick={() => toggleArea(id)} className="hover:text-destructive">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <Select onValueChange={(v) => toggleArea(v)} value="" disabled={isDesligado}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {areasDaDiretoria
-                          .filter((a: AreaEntity) => !areaIds.includes(a.id))
-                          .map((a: AreaEntity) => (
+                    {multiArea ? (
+                      <>
+                        {areaIds.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {areaIds.map((id) => {
+                              const area = allAreas.find((a: AreaEntity) => a.id === id);
+                              return (
+                                <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                                  {area?.nome ?? id}
+                                  <button type="button" onClick={() => toggleArea(id)} className="hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Select onValueChange={(v) => toggleArea(v)} value="" disabled={isDesligado}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {areasDaDiretoria
+                              .filter((a: AreaEntity) => !areaIds.includes(a.id))
+                              .map((a: AreaEntity) => (
+                                <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </>
+                    ) : (
+                      <Select
+                        onValueChange={(v) => toggleArea(v === "nenhuma" ? "" : v)}
+                        value={areaIds[0] ?? ""}
+                        disabled={isDesligado}
+                      >
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                          {areasDaDiretoria.map((a: AreaEntity) => (
                             <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                           ))}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )} />

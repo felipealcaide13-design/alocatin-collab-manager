@@ -29,7 +29,7 @@ interface OrgNode {
 
 const SENIORITY_ORDER: Senioridade[] = [
   "C-level", "Diretor(a)", "Head", "Gerente", "Coordenador(a)",
-  "Staf I", "Staf II", "Analista senior", "Analista pleno", "Analista junior",
+  "Staff I", "Staff II", "Analista senior", "Analista pleno", "Analista junior",
 ];
 
 const SENIORITY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -40,8 +40,8 @@ const SENIORITY_COLORS: Record<string, { bg: string; border: string; text: strin
   "Head":            { bg: "#0369a1", border: "#075985", text: "#e0f2fe" },
   "Gerente":         { bg: "#0891b2", border: "#0e7490", text: "#ecfeff" },
   "Coordenador(a)":  { bg: "#0d9488", border: "#0f766e", text: "#f0fdfa" },
-  "Staf I":          { bg: "#059669", border: "#047857", text: "#ecfdf5" },
-  "Staf II":         { bg: "#16a34a", border: "#15803d", text: "#f0fdf4" },
+  "Staff I":          { bg: "#059669", border: "#047857", text: "#ecfdf5" },
+  "Staff II":         { bg: "#16a34a", border: "#15803d", text: "#f0fdf4" },
   "Analista senior": { bg: "#65a30d", border: "#4d7c0f", text: "#f7fee7" },
   "Analista pleno":  { bg: "#ca8a04", border: "#a16207", text: "#fefce8" },
   "Analista junior": { bg: "#d97706", border: "#b45309", text: "#fffbeb" },
@@ -52,8 +52,8 @@ const VALID_PARENT_SENIORITIES: Partial<Record<Senioridade, Senioridade[]>> = {
   "Head":           ["Diretor(a)", "C-level"],
   "Gerente":        ["Head", "Diretor(a)", "C-level"],
   "Coordenador(a)": ["Gerente", "Head", "Diretor(a)", "C-level"],
-  "Staf I":         ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
-  "Staf II":        ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
+  "Staff I":         ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
+  "Staff II":        ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
   "Analista senior":["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
   "Analista pleno": ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],
   "Analista junior":["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"],

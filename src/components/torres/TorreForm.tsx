@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Torre } from "@/types/torre";
-import { BUTorreConfig } from "@/types/configuracaoTorre";
 import { colaboradorService } from "@/services/colaboradorService";
 import { businessUnitService } from "@/services/businessUnitService";
 import { configuracaoTorreService } from "@/services/configuracaoTorreService";
@@ -37,9 +36,6 @@ interface TorreFormProps {
 export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: TorreFormProps) {
     const isEdit = !!initialData;
 
-    const [buConfig, setBuConfig] = useState<BUTorreConfig | null>(null);
-    const [configLoading, setConfigLoading] = useState(false);
-
     const { data: colaboradores = [] } = useQuery({
         queryKey: ["colaboradores"],
         queryFn: () => colaboradorService.getAll(),
@@ -62,25 +58,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
 
     const watchedBuId = form.watch("bu_id");
 
-    // Load BU config when bu_id changes
-    useEffect(() => {
-        if (!watchedBuId || watchedBuId === "none") {
-            setBuConfig(null);
-            return;
-        }
-
-        setConfigLoading(true);
-        configuracaoTorreService.getByBuId(watchedBuId)
-            .then((config) => {
-                setBuConfig(config);
-            })
-            .catch(() => {
-                setBuConfig(null);
-            })
-            .finally(() => {
-                setConfigLoading(false);
-            });
-    }, [watchedBuId]);
+    const { data: buConfig = null, isLoading: configLoading } = useQuery({
+        queryKey: ["configuracao_torre", watchedBuId],
+        queryFn: () => configuracaoTorreService.getByBuId(watchedBuId!),
+        enabled: !!watchedBuId && watchedBuId !== "none",
+    });
 
     // Reset liderancas when BU changes (but not on initial load)
     const prevBuIdRef = useRef<string | null | undefined>(undefined);
@@ -108,7 +90,6 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                     liderancas: {},
                     descricao: "",
                 });
-                setBuConfig(null);
             }
         }
     }, [open, initialData, form]);
