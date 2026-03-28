@@ -18,6 +18,8 @@ export interface Contrato {
     torres: string[] | null;
     /** IDs de squads específicas vinculadas. Null/vazio = todas as squads das torres vinculadas. */
     squads_ids: string[] | null;
+    arquivo_url?: string | null;
+    arquivo_nome?: string | null;
     created_at?: string;
 }
 

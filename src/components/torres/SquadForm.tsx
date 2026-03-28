@@ -112,13 +112,13 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
                 <DialogHeader>
-                    <DialogTitle>{isEdit ? "Editar Squad" : "Novo Squad"}</DialogTitle>
+                    <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Squad" : "Novo Squad"}</DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
                         <FormField control={form.control} name="nome" render={({ field }) => (
                             <FormItem>
@@ -247,9 +247,11 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
                             </FormItem>
                         )} />
 
-                        <DialogFooter className="gap-2 mt-4">
-                            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                            <Button type="submit" disabled={isLoading}>
+                        <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
+                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Squad"}
                             </Button>
                         </DialogFooter>

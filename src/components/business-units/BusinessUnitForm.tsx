@@ -75,13 +75,13 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar Business Unit" : "Nova Business Unit"}</DialogTitle>
+          <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Business Unit" : "Nova Business Unit"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Nome — always required */}
             <FormField control={form.control} name="nome" render={({ field }) => (
               <FormItem>
@@ -108,8 +108,10 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
 
             {/* Dynamic leadership fields */}
             {configLoaded && buFormConfig.campos_lideranca.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground">Liderança</p>
+              <>
+                <hr className="border-[#08526E] mt-4 mb-4" />
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
                 {buFormConfig.campos_lideranca.map((campo) => {
                   const opcoes = colaboradores.filter((c) =>
                     c.senioridade === campo.senioridade &&
@@ -142,12 +144,15 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
                     />
                   );
                 })}
-              </div>
+                </div>
+              </>
             )}
 
-            <DialogFooter className="gap-2 mt-2">
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={isLoading}>
+            <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
+              <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar BU"}
               </Button>
             </DialogFooter>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download, Eye } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download, Eye, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,19 +17,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 import { ContratoForm } from "@/components/contratos/ContratoForm";
-import { ContratoDetailPanel } from "@/components/contratos/ContratoDetailPanel";
 import { DeleteConfirmDialog } from "@/components/contratos/DeleteConfirmDialog";
 import { contratoService } from "@/services/contratoService";
 import { torreService } from "@/services/torreService";
 import { type Contrato, CONTRATO_STATUS } from "@/types/contrato";
 
-type SortField = "nome" | "cliente" | "status" | "valor" | "data_fim";
+type SortField = "nome" | "cliente" | "status" | "contract_type" | "valor" | "data_fim";
 type SortDir = "asc" | "desc";
 
 export default function Contratos() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
 
     // Filters
     const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
@@ -48,7 +48,6 @@ export default function Contratos() {
     const [formOpen, setFormOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Contrato | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Contrato | null>(null);
-    const [detailTarget, setDetailTarget] = useState<Contrato | null>(null);
 
     const { data: contratos = [], isLoading } = useQuery({
         queryKey: ["contratos"],
@@ -200,11 +199,27 @@ export default function Contratos() {
         }
     };
 
-    const handleFormSubmit = async (values: Omit<Contrato, "id" | "created_at">) => {
+    const handleFormSubmit = async (values: Omit<Contrato, "id" | "created_at">, file: File | null) => {
+        let submissionData = { ...values };
+
+        if (file) {
+            try {
+                const { url, nome } = await contratoService.uploadArquivo(file);
+                submissionData.arquivo_url = url;
+                submissionData.arquivo_nome = nome;
+            } catch (error: any) {
+                toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+                return; // Stop submission if upload fails
+            }
+        }
+
         if (editTarget) {
-            await updateMutation.mutateAsync({ id: editTarget.id, data: values });
+            if (editTarget.arquivo_url && editTarget.arquivo_url !== submissionData.arquivo_url) {
+                await contratoService.removeArquivo(editTarget.arquivo_url).catch((e) => console.error("Error removing old file:", e));
+            }
+            await updateMutation.mutateAsync({ id: editTarget.id, data: submissionData });
         } else {
-            await createMutation.mutateAsync(values);
+            await createMutation.mutateAsync(submissionData);
         }
     };
 
@@ -219,198 +234,202 @@ export default function Contratos() {
                 </Button>
             }
         >
-      {/* Main container */}
-      <div className="bg-white rounded-[24px] p-4 sm:p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
-        {/* Filters and New Button Row */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <Button onClick={() => { setEditTarget(null); setFormOpen(true); }} className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Contrato
-            </Button>
-            
-            <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
-                <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
-                    <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
-                        <SelectValue placeholder="Todos os status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todos os status</SelectItem>
-                        {CONTRATO_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+            {/* Main container */}
+            <div className="bg-white rounded-[24px] p-4 sm:p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
+                {/* Filters and New Button Row */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <Button onClick={() => { setEditTarget(null); setFormOpen(true); }} className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Novo Contrato
+                    </Button>
 
-                <Select value={filterCliente} onValueChange={(v) => { setFilterCliente(v); setPage(1); }}>
-                    <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
-                        <SelectValue placeholder="Todos clientes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todos clientes</SelectItem>
-                        {uniqueClientes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                    <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
+                            <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
+                                <SelectValue placeholder="Todos os status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos os status</SelectItem>
+                                {CONTRATO_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
 
-                <div className="relative w-full md:w-[260px]">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Buscar por nome ou cliente..."
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        className="pl-9 bg-[#F5F5F5] border-[#E0E0E0] border rounded-full h-10"
-                    />
-                </div>
-            </div>
-        </div>
+                        <Select value={filterCliente} onValueChange={(v) => { setFilterCliente(v); setPage(1); }}>
+                            <SelectTrigger className="w-full md:w-[200px] h-10 rounded-full font-normal">
+                                <SelectValue placeholder="Todos clientes" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos clientes</SelectItem>
+                                {uniqueClientes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
 
-        {/* Table container */}
-        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-muted/40">
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                    <button
-                                        onClick={() => handleSort("nome")}
-                                        className="flex items-center hover:text-foreground transition-colors"
-                                    >
-                                        Nome <SortIcon field="nome" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
-                                    <button
-                                        onClick={() => handleSort("cliente")}
-                                        className="flex items-center hover:text-foreground transition-colors"
-                                    >
-                                        Cliente <SortIcon field="cliente" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                    <button
-                                        onClick={() => handleSort("status")}
-                                        className="flex items-center hover:text-foreground transition-colors"
-                                    >
-                                        Status <SortIcon field="status" />
-                                    </button>
-                                </th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                    <button
-                                        onClick={() => handleSort("valor")}
-                                        className="flex items-center justify-end hover:text-foreground transition-colors ml-auto"
-                                    >
-                                        Valor <SortIcon field="valor" />
-                                    </button>
-                                </th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                    Fim
-                                </th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground">
-                                    Ações
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading
-                                ? [...Array(5)].map((_, i) => (
-                                    <tr key={i} className="border-b">
-                                        <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                        <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-24" /></td>
-                                        <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                                        <td className="px-4 py-3 hidden lg:table-cell text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-                                        <td className="px-4 py-3 hidden lg:table-cell text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-                                        <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-16 ml-auto" /></td>
-                                    </tr>
-                                ))
-                                : paginated.length === 0
-                                    ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                                                Nenhum contrato encontrado.
-                                            </td>
-                                        </tr>
-                                    )
-                                    : paginated.map((c) => (
-                                        <tr
-                                            key={c.id}
-                                            className="border-b last:border-0 hover:bg-muted/20 transition-colors"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-foreground">{c.nome}</div>
-                                                <div className="text-xs text-muted-foreground md:hidden">{c.cliente}</div>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.cliente}</td>
-                                            <td className="px-4 py-3">
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(c.status)}`}>
-                                                    {c.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right font-mono text-xs">
-                                                <div>{formatCurrency(c.valor)}</div>
-                                                <div className="text-[10px] opacity-60">{c.contract_type === "Aberto" ? "mensal" : "total"}</div>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right text-xs">
-                                                {formatDate(c.data_fim)}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                        title="Ver detalhes"
-                                                        onClick={() => setDetailTarget(c)}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                        onClick={() => { setEditTarget(c); setFormOpen(true); }}
-                                                    >
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => setDeleteTarget(c)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                {!isLoading && filtered.length > PAGE_SIZE && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
-                        <p className="text-sm text-muted-foreground">
-                            Página {page} de {totalPages} — {filtered.length} registros
-                        </p>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                            >
-                                Anterior
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                            >
-                                Próxima
-                            </Button>
+                        <div className="relative w-full max-w-[200px] shrink-0">
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por nome"
+                                value={search}
+                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                className="pl-9 bg-muted border-0 rounded-full"
+                            />
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+
+                {/* Table container */}
+                <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b bg-muted/40">
+                                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                        <button
+                                            onClick={() => handleSort("nome")}
+                                            className="flex items-center hover:text-foreground transition-colors"
+                                        >
+                                            Nome <SortIcon field="nome" />
+                                        </button>
+                                    </th>
+                                    <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
+                                        <button
+                                            onClick={() => handleSort("cliente")}
+                                            className="flex items-center hover:text-foreground transition-colors"
+                                        >
+                                            Cliente <SortIcon field="cliente" />
+                                        </button>
+                                    </th>
+                                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                        <button
+                                            onClick={() => handleSort("status")}
+                                            className="flex items-center hover:text-foreground transition-colors"
+                                        >
+                                            Status <SortIcon field="status" />
+                                        </button>
+                                    </th>
+                                    <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                        <button
+                                            onClick={() => handleSort("contract_type")}
+                                            className="flex items-center hover:text-foreground transition-colors"
+                                        >
+                                            Tipo <SortIcon field="contract_type" />
+                                        </button>
+                                    </th>
+                                    <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                        <button
+                                            onClick={() => handleSort("valor")}
+                                            className="flex items-center justify-end hover:text-foreground transition-colors ml-auto"
+                                        >
+                                            Valor <SortIcon field="valor" />
+                                        </button>
+                                    </th>
+                                    <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                        <button
+                                            onClick={() => handleSort("data_fim")}
+                                            className="flex items-center justify-end hover:text-foreground transition-colors ml-auto"
+                                        >
+                                            Data de término <SortIcon field="data_fim" />
+                                        </button>
+                                    </th>
+                                    <th className="text-right px-4 py-3 font-medium text-muted-foreground"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {isLoading
+                                    ? [...Array(5)].map((_, i) => (
+                                        <tr key={i} className="border-b">
+                                            <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                                            <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-24" /></td>
+                                            <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                            <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                            <td className="px-4 py-3 hidden lg:table-cell text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                                            <td className="px-4 py-3 hidden lg:table-cell text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                                            <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-16 ml-auto" /></td>
+                                        </tr>
+                                    ))
+                                    : paginated.length === 0
+                                        ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                                                    Nenhum contrato encontrado.
+                                                </td>
+                                            </tr>
+                                        )
+                                        : paginated.map((c) => (
+                                            <tr
+                                                key={c.id}
+                                                className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                                            >
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium text-foreground">{c.nome}</div>
+                                                    <div className="text-xs text-muted-foreground md:hidden">{c.cliente}</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.cliente}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(c.status)}`}>
+                                                        {c.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 hidden lg:table-cell text-left">
+                                                    {c.contract_type ? (
+                                                        <div className="inline-block bg-[#e0e0e0]/50 px-2.5 py-0.5 rounded-full text-xs font-semibold text-[#262626]">
+                                                            {c.contract_type}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right">
+                                                    {formatCurrency(c.valor)}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-right">
+                                                    {formatDate(c.data_fim)}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                            title="Ver detalhes"
+                                                            onClick={() => navigate(`/contratos/${c.id}`)}
+                                                        >
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    {!isLoading && filtered.length > PAGE_SIZE && (
+                        <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+                            <p className="text-sm text-muted-foreground">
+                                Página {page} de {totalPages} — {filtered.length} registros
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                >
+                                    Anterior
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
+                                >
+                                    Próxima
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Modals */}
@@ -428,14 +447,6 @@ export default function Contratos() {
                 onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 nome={deleteTarget?.nome ?? ""}
                 isLoading={deleteMutation.isPending}
-            />
-
-            <ContratoDetailPanel
-                contrato={detailTarget}
-                open={!!detailTarget}
-                onClose={() => setDetailTarget(null)}
-                torres={torres}
-                squads={squads}
             />
         </PageLayout>
     );

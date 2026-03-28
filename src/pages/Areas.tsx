@@ -460,7 +460,7 @@ export default function Areas() {
 
                                             {/* Areas list */}
                                             {expanded && (
-                                                <div className="divide-y divide-border/50">
+                                                <div className="border-t">
                                                     {filteredAreas.length === 0 ? (
                                                         <p className="px-8 py-4 text-sm text-muted-foreground">
                                                             Nenhuma área nesta diretoria.
@@ -491,7 +491,7 @@ export default function Areas() {
                                             </span>
                                         </div>
                                         {expandedDiretorias.has("__unassigned__") && (
-                                            <div className="divide-y divide-border/50">
+                                            <div className="border-t">
                                                 {unassignedAreas.map((area) => (
                                                     <AreaRow key={area.id} area={area} />
                                                 ))}
@@ -506,9 +506,9 @@ export default function Areas() {
 
             {/* Diretoria form */}
             <Dialog open={dirFormOpen} onOpenChange={(v) => { if (!v) { setDirFormOpen(false); setDirEditTarget(null); } }}>
-                <DialogContent className="max-w-lg bg-muted border-0 shadow-lg">
+                <DialogContent className="max-w-lg overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
                     <DialogHeader>
-                        <DialogTitle>{dirEditTarget ? "Editar Diretoria" : "Nova Diretoria"}</DialogTitle>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{dirEditTarget ? "Editar Diretoria" : "Nova Diretoria"}</DialogTitle>
                     </DialogHeader>
                     <DiretoriaForm
                         diretoria={dirEditTarget ?? undefined}

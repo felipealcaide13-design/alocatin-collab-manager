@@ -7,6 +7,7 @@ import { DetailSection, StatMini } from "@/components/ui/detail-section";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { type Contrato } from "@/types/contrato";
 import { type Torre, type Squad } from "@/types/torre";
+import { HistoricoAlteracoesContrato } from "./HistoricoAlteracoesContrato";
 
 interface Props {
   contrato: Contrato | null;
@@ -169,6 +170,14 @@ export function ContratoDetailPanel({ contrato, open, onClose, torres, squads }:
             </div>
           </DetailSection>
         )}
+
+        <Separator className="my-2" />
+        <HistoricoAlteracoesContrato 
+          contratoId={contrato.id}
+          torres={torres}
+          squads={squads}
+        />
+        
       </DialogContent>
     </Dialog>
   );

@@ -1,19 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { historicoService } from "@/services/historicoService";
-import { ROTULOS_CAMPOS, type EventoAlteracao, type CampoRastreavel } from "@/types/historico";
+import { historicoContratoService } from "@/services/historicoContratoService";
+import { ROTULOS_CAMPOS_CONTRATO, type EventoAlteracaoContrato, type CampoRastreavelContrato } from "@/types/historicoContrato";
 import type { Torre, Squad } from "@/types/torre";
-import type { Diretoria } from "@/types/diretoria";
-import type { BusinessUnit } from "@/types/businessUnit";
 
 interface Props {
-  colaboradorId: string;
+  contratoId: string;
   torres: Torre[];
   squads: Squad[];
-  diretorias: Diretoria[];
-  businessUnits: BusinessUnit[];
 }
 
-/** Extrai nome legível de um item do histórico — suporta formato legado (só ID) e novo ({id, nome}) */
 function resolverItem(
   raw: unknown,
   lista: { id: string; nome: string }[]
@@ -33,17 +28,15 @@ function resolverItem(
   return "—";
 }
 
-export function resolverValorCampo(
-  campo: CampoRastreavel,
+export function resolverValorCampoContrato(
+  campo: CampoRastreavelContrato,
   valor: string | null,
   torres: Torre[],
-  squads: Squad[],
-  diretorias: Diretoria[],
-  businessUnits: BusinessUnit[]
+  squads: Squad[]
 ): string {
   if (valor === null || valor === undefined) return "—";
 
-  if (campo === "torre_ids" || campo === "squad_ids") {
+  if (campo === "torres" || campo === "squads_ids") {
     let parsed: unknown[];
     try {
       parsed = JSON.parse(valor);
@@ -51,38 +44,15 @@ export function resolverValorCampo(
       return valor;
     }
     if (!Array.isArray(parsed) || parsed.length === 0) return "—";
-    const lista = campo === "torre_ids" ? torres : squads;
+    const lista = campo === "torres" ? torres : squads;
     return parsed.map((item) => resolverItem(item, lista)).join(", ");
   }
 
-  if (campo === "bu_id") {
-    try {
-      const obj = JSON.parse(valor) as { id?: string; nome?: string };
-      if (obj.nome) return obj.nome;
-      if (obj.id) {
-        const found = businessUnits.find((b) => b.id === obj.id);
-        return found ? found.nome : `${obj.nome ?? obj.id} (removido)`;
-      }
-    } catch {
-      // Formato legado
+  if (campo === "valor") {
+    const numero = Number(valor);
+    if (!isNaN(numero)) {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numero);
     }
-    const found = businessUnits.find((b) => b.id === valor);
-    return found ? found.nome : "(removido)";
-  }
-
-  if (campo === "diretoria_id") {
-    try {
-      const obj = JSON.parse(valor) as { id?: string; nome?: string };
-      if (obj.nome) return obj.nome;
-      if (obj.id) {
-        const found = diretorias.find((d) => d.id === obj.id);
-        return found ? found.nome : `${obj.nome ?? obj.id} (removido)`;
-      }
-    } catch {
-      // Formato legado
-    }
-    const found = diretorias.find((d) => d.id === valor);
-    return found ? found.nome : "(removido)";
   }
 
   return valor;
@@ -97,17 +67,15 @@ function SkeletonRow() {
   );
 }
 
-export function HistoricoAlteracoes({
-  colaboradorId,
+export function HistoricoAlteracoesContrato({
+  contratoId,
   torres,
   squads,
-  diretorias,
-  businessUnits,
 }: Props) {
   const { data: eventos = [], isLoading: loading, isError: error } = useQuery({
-    queryKey: ["historico", colaboradorId],
-    queryFn: () => historicoService.getByColaborador(colaboradorId),
-    enabled: !!colaboradorId,
+    queryKey: ["historico_contratos", contratoId],
+    queryFn: () => historicoContratoService.getByContrato(contratoId),
+    enabled: !!contratoId,
   });
 
   return (
@@ -125,9 +93,9 @@ export function HistoricoAlteracoes({
       ) : eventos.length === 0 ? (
         <p className="text-sm text-muted-foreground p-4 bg-muted rounded-xl">Nenhuma alteração registrada ainda.</p>
       ) : (
-        <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col gap-2 w-full max-h-[400px] overflow-y-auto pr-2">
           {eventos.map((evento) => {
-            const rotulo = ROTULOS_CAMPOS[evento.campo];
+            const rotulo = ROTULOS_CAMPOS_CONTRATO[evento.campo];
             const dataHora = new Date(evento.alterado_em).toLocaleString("pt-BR", {
               day: "2-digit",
               month: "2-digit",
@@ -156,26 +124,26 @@ export function HistoricoAlteracoes({
               );
             }
 
-            const anterior = resolverValorCampo(evento.campo, evento.valor_anterior, torres, squads, diretorias, businessUnits);
-            const novo = resolverValorCampo(evento.campo, evento.novo_valor, torres, squads, diretorias, businessUnits);
+            const anterior = resolverValorCampoContrato(evento.campo, evento.valor_anterior, torres, squads);
+            const novo = resolverValorCampoContrato(evento.campo, evento.novo_valor, torres, squads);
 
             return (
               <div
                 key={evento.id}
-                className="bg-muted flex items-start justify-between p-4 rounded-xl w-full"
+                className="bg-muted flex items-start justify-between p-4 rounded-xl w-full border border-gray-100 dark:border-gray-800"
               >
                 <div className="flex flex-col min-w-0 pr-4">
-                  <p className="text-xs font-semibold text-[#262626]">{rotulo}</p>
+                  <p className="text-xs font-semibold text-[#262626] dark:text-gray-200">{rotulo}</p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-[#737373] text-sm break-all">{anterior}</span>
                     <span className="text-[#737373]/60">→</span>
-                    <span className="font-medium text-[#262626] text-sm break-all">{novo}</span>
+                    <span className="font-medium text-[#262626] dark:text-gray-100 text-sm break-all">{novo}</span>
                   </div>
                   {exibirAutor && (
                     <p className="text-xs text-muted-foreground/70 mt-0.5">Alterado por: {evento.autor_alteracao}</p>
                   )}
                 </div>
-                <span className="text-[#262626] text-xs pt-1 shrink-0">{dataHora}</span>
+                <span className="text-muted-foreground text-xs pt-1 shrink-0">{dataHora}</span>
               </div>
             );
           })}

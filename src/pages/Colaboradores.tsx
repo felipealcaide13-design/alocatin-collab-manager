@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-react";
+import { Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Eye, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
@@ -21,7 +21,7 @@ import { diretoriaService } from "@/services/diretoriaService";
 import { type Colaborador } from "@/types/colaborador";
 import { useToast } from "@/hooks/use-toast";
 
-type SortField = "nomeCompleto" | "status" | "senioridade";
+type SortField = "nomeCompleto" | "diretoria" | "area" | "status" | "senioridade";
 type SortDir = "asc" | "desc";
 
 export default function Colaboradores() {
@@ -104,13 +104,22 @@ export default function Colaboradores() {
         return matchSearch && matchDiretoria && matchArea && matchStatus;
       })
       .sort((a, b) => {
-        const av = a[sortField] ?? "";
-        const bv = b[sortField] ?? "";
+        let av: string, bv: string;
+        if (sortField === "diretoria") {
+          av = a.diretoria_id ? (diretorias.find((d) => d.id === a.diretoria_id)?.nome ?? "") : "";
+          bv = b.diretoria_id ? (diretorias.find((d) => d.id === b.diretoria_id)?.nome ?? "") : "";
+        } else if (sortField === "area") {
+          av = a.area_ids.length > 0 ? (fetchedAreas.find((ar) => ar.id === a.area_ids[0])?.nome ?? "") : "";
+          bv = b.area_ids.length > 0 ? (fetchedAreas.find((ar) => ar.id === b.area_ids[0])?.nome ?? "") : "";
+        } else {
+          av = a[sortField] ?? "";
+          bv = b[sortField] ?? "";
+        }
         return sortDir === "asc"
           ? String(av).localeCompare(String(bv))
           : String(bv).localeCompare(String(av));
       });
-  }, [colaboradores, search, filterDiretoria, filterArea, filterStatus, areasFiltradas, sortField, sortDir]);
+  }, [colaboradores, search, filterDiretoria, filterArea, filterStatus, areasFiltradas, sortField, sortDir, diretorias, fetchedAreas]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -178,20 +187,20 @@ export default function Colaboradores() {
               </SelectContent>
             </Select>
 
-            <div className="relative w-full md:w-[220px]">
+            <div className="relative w-full max-w-[200px] shrink-0">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="pl-9 bg-[#F5F5F5] border-[#E0E0E0] border rounded-full h-10"
+                className="pl-9 bg-muted border-0 rounded-full"
               />
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-[16px] border border-muted shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -202,10 +211,14 @@ export default function Colaboradores() {
                     </button>
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">
-                    Diretoria
+                    <button onClick={() => handleSort("diretoria")} className="flex items-center hover:text-foreground transition-colors">
+                      Diretoria <SortIcon field="diretoria" />
+                    </button>
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                    Área / Especialidade
+                    <button onClick={() => handleSort("area")} className="flex items-center hover:text-foreground transition-colors">
+                      Área / Especialidade <SortIcon field="area" />
+                    </button>
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">
                     <button onClick={() => handleSort("senioridade")} className="flex items-center hover:text-foreground transition-colors">
@@ -217,30 +230,29 @@ export default function Colaboradores() {
                       Status <SortIcon field="status" />
                     </button>
                   </th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading
                   ? [...Array(8)].map((_, i) => (
-                      <tr key={i} className="border-b">
-                        <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                        <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-40" /></td>
-                        <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
-                        <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
-                        <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
-                        <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-10 ml-auto" /></td>
-                      </tr>
-                    ))
+                    <tr key={i} className="border-b">
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                      <td className="px-4 py-3 hidden md:table-cell"><Skeleton className="h-4 w-40" /></td>
+                      <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-4 py-3 hidden xl:table-cell"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                      <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-10 ml-auto" /></td>
+                    </tr>
+                  ))
                   : paginated.length === 0
-                  ? (
+                    ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                           Nenhum colaborador encontrado com os filtros aplicados.
                         </td>
                       </tr>
                     )
-                  : paginated.map((c) => (
+                    : paginated.map((c) => (
                       <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3">
                           <div>
@@ -279,7 +291,7 @@ export default function Colaboradores() {
                             title="Ver detalhes"
                             onClick={() => navigate(`/colaboradores/${c.id}`)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <ChevronRight className="h-4 w-4" />
                           </Button>
                         </td>
                       </tr>

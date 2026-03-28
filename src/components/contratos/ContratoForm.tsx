@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Plus, Trash2, Calendar } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2, Calendar, Upload, X, FileText } from "lucide-react";
 import { torreService } from "@/services/torreService";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +61,8 @@ const schema = z.object({
     descricao: z.string().nullable().optional(),
     torres: z.array(z.string()).default([]),
     squads_ids: z.array(z.string()).default([]),
+    arquivo_url: z.string().nullable().optional(),
+    arquivo_nome: z.string().nullable().optional(),
 }).superRefine((data, ctx) => {
     if (data.contract_type === "Fechado" && !data.data_fim) {
         ctx.addIssue({
@@ -76,7 +78,7 @@ type FormValues = z.infer<typeof schema>;
 interface ContratoFormProps {
     open: boolean;
     onClose: () => void;
-    onSubmit: (values: FormValues) => Promise<void>;
+    onSubmit: (values: FormValues, file: File | null) => Promise<void>;
     initialData?: Contrato | null;
     isLoading?: boolean;
 }
@@ -223,6 +225,7 @@ export function ContratoForm({
     const isEdit = !!initialData;
     const [displayValor, setDisplayValor] = useState("");
     const [torreSelections, setTorreSelections] = useState<TorreSquadSelection[]>([]);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const { data: torres = [] } = useQuery({
         queryKey: ["torres"],
@@ -242,6 +245,8 @@ export function ContratoForm({
             descricao: "",
             torres: [],
             squads_ids: [],
+            arquivo_url: null,
+            arquivo_nome: null,
         },
     });
 
@@ -273,6 +278,8 @@ export function ContratoForm({
                     descricao: initialData.descricao || "",
                     torres: initialData.torres || [],
                     squads_ids: initialData.squads_ids || [],
+                    arquivo_url: initialData.arquivo_url || null,
+                    arquivo_nome: initialData.arquivo_nome || null,
                 });
                 const v = initialData.valor ?? initialData.valor_total;
                 setDisplayValor(v != null ? formatarMilhares(String(v)) : "");
@@ -289,9 +296,12 @@ export function ContratoForm({
                     descricao: "",
                     torres: [],
                     squads_ids: [],
+                    arquivo_url: null,
+                    arquivo_nome: null,
                 });
                 setDisplayValor("");
                 setTorreSelections([]);
+                setSelectedFile(null);
             }
         }
     }, [open, initialData, torres, form]);
@@ -331,21 +341,35 @@ export function ContratoForm({
     };
 
     const handleSubmit = form.handleSubmit(async (values) => {
-        await onSubmit(values);
+        await onSubmit(values, selectedFile);
     });
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0]);
+            form.setValue("arquivo_url", null); // we mark no existing url since we are uploading a new one
+            form.setValue("arquivo_nome", e.target.files[0].name);
+        }
+    };
+
+    const handleClearFile = () => {
+        setSelectedFile(null);
+        form.setValue("arquivo_url", null);
+        form.setValue("arquivo_nome", null);
+    };
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-muted border-0 shadow-lg">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
                 <DialogHeader>
-                    <DialogTitle>{isEdit ? "Editar Contrato" : "Novo Contrato"}</DialogTitle>
+                    <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Contrato" : "Novo Contrato"}</DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {/* ── Bloco 1: Detalhes do Contrato ── */}
-                        <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-4">Detalhes Gerais</h3>
+                        <div className="flex flex-col gap-4">
+                            <h3 className="text-sm font-semibold text-[#0a688a]">Detalhes Gerais</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Nome */}
                                 <FormField
@@ -466,9 +490,72 @@ export function ContratoForm({
                             </div>
                         </div>
 
+                        {/* ── Bloco: Documento Anexo ── */}
+                        <hr className="border-[#08526E] mt-4 mb-4" />
+                        <div className="flex flex-col gap-4">
+                            <h3 className="text-sm font-semibold text-[#0a688a]">Documento Anexo</h3>
+                            {(form.watch('arquivo_url') || selectedFile) ? (
+                                <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/20">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                                            <FileText className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div className="truncate">
+                                            <p className="text-sm font-medium truncate">
+                                                {selectedFile ? selectedFile.name : form.watch('arquivo_nome')}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {selectedFile ? "Pronto para envio" : "Documento salvo"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {!selectedFile && form.watch('arquivo_url') && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 shadow-none"
+                                                onClick={() => window.open(form.watch('arquivo_url') as string, '_blank')}
+                                            >
+                                                Download
+                                            </Button>
+                                        )}
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                            onClick={handleClearFile}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center gap-2 hover:bg-muted/10 transition-colors">
+                                    <div className="p-3 bg-muted rounded-full">
+                                        <Upload className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Clique para selecionar ou arraste o arquivo</p>
+                                        <p className="text-xs text-muted-foreground mt-1">PDF, Word, Excel (Max 10MB)</p>
+                                    </div>
+                                    <Input
+                                        type="file"
+                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                        onChange={handleFileChange}
+                                        style={{ top: "auto", height: "auto" }} // It overrides to be careful about not blocking everything! Wait, replacing `absolute inset-0` because it might cover other things.
+                                    />
+                                    {/* Workaround for absolute blocking: use a hidden file input linked via label or just place it right */}
+                                </div>
+                            )}
+                        </div>
+
                         {/* ── Bloco 2: Período ── */}
-                        <div className="bg-white border rounded-2xl p-4 sm:p-6 shadow-sm">
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-4">Período Vigente</h3>
+                        <hr className="border-[#08526E] mt-4 mb-4" />
+                        <div className="flex flex-col gap-4">
+                            <h3 className="text-sm font-semibold text-[#0a688a]">Período Vigente</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Data Inicio */}
                                 <FormField
@@ -479,9 +566,9 @@ export function ContratoForm({
                                             <FormLabel>Data de Início *</FormLabel>
                                             <div className="relative flex items-center">
                                                 <FormControl>
-                                                    <Input 
-                                                        {...field} 
-                                                        type="date" 
+                                                    <Input
+                                                        {...field}
+                                                        type="date"
                                                         className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
                                                     />
                                                 </FormControl>
@@ -503,10 +590,10 @@ export function ContratoForm({
                                             </FormLabel>
                                             <div className="relative flex items-center">
                                                 <FormControl>
-                                                    <Input 
-                                                        {...field} 
-                                                        type="date" 
-                                                        value={field.value || ""} 
+                                                    <Input
+                                                        {...field}
+                                                        type="date"
+                                                        value={field.value || ""}
                                                         className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
                                                     />
                                                 </FormControl>
@@ -520,9 +607,10 @@ export function ContratoForm({
                         </div>
 
                         {/* Torres + Squads */}
-                        <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+                        <hr className="border-[#08526E] mt-4 mb-4" />
+                        <div className="flex flex-col gap-4">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-semibold text-muted-foreground">Torres e Squads</h3>
+                                <h3 className="text-sm font-semibold text-[#0a688a]">Torres e Squads</h3>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -562,11 +650,11 @@ export function ContratoForm({
                             )}
                         </div>
 
-                        <DialogFooter className="gap-2 mt-4">
-                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full">
+                        <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
+                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={isLoading} className="rounded-full">
+                            <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Cadastrar"}
                             </Button>
                         </DialogFooter>

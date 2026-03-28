@@ -11,6 +11,7 @@ import Areas from "./pages/Areas";
 import DiretoriaAnalise from "./pages/DiretoriaAnalise";
 import OrgChartPage from "./pages/OrgChartPage";
 import Contratos from "./pages/Contratos";
+import ContratoDetail from "./pages/ContratoDetail";
 import BusinessUnits from "./pages/BusinessUnits";
 import BusinessUnitsOrganograma from "./pages/BusinessUnitsOrganograma";
 import BusinessUnitsHistorico from "./pages/BusinessUnitsHistorico";
@@ -62,6 +63,7 @@ const App = () => (
                       <Route path="/business-units/organograma" element={<BusinessUnitsOrganograma />} />
                       <Route path="/business-units/historico" element={<BusinessUnitsHistorico />} />
                       <Route path="/contratos" element={<Contratos />} />
+                      <Route path="/contratos/:id" element={<ContratoDetail />} />
                       <Route path="/colaboradores" element={<Colaboradores />} />
                       <Route path="/colaboradores/:id" element={<ColaboradorDetail />} />
                       <Route path="/areas" element={<Areas />} />

@@ -413,9 +413,9 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-muted border-0 shadow-lg">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar Colaborador" : "Novo Colaborador"}</DialogTitle>
+          <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Colaborador" : "Novo Colaborador"}</DialogTitle>
         </DialogHeader>
 
         {/* ── Alerta de inconsistência (modo edição) ── */}
@@ -429,10 +429,10 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
         )}
 
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             {/* ── Bloco 1: Identificação, Admissão, Status e Senioridade ── */}
-            <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+            <div className="flex flex-col gap-4">
               <FormField control={form.control} name="nomeCompleto" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome Completo *</FormLabel>
@@ -444,7 +444,25 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               <FormField control={form.control} name="documento" render={({ field }) => (
                 <FormItem>
                   <FormLabel>CPF</FormLabel>
-                  <FormControl><Input {...field} placeholder="000.000.000-00" disabled={isDesligado} /></FormControl>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="000.000.000-00"
+                      disabled={isDesligado}
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                        if (v.length > 9) {
+                          v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+                        } else if (v.length > 6) {
+                          v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+                        } else if (v.length > 3) {
+                          v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+                        }
+                        field.onChange(v);
+                      }}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -462,10 +480,10 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
                   <FormLabel>Data de Admissão *</FormLabel>
                   <div className="relative flex items-center">
                     <FormControl>
-                      <Input 
-                        {...field} 
-                        type="date" 
-                        disabled={isDesligado} 
+                      <Input
+                        {...field}
+                        type="date"
+                        disabled={isDesligado}
                         className="[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:right-0"
                       />
                     </FormControl>
@@ -510,7 +528,8 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
             </div>
 
             {/* ══ GRUPO 1: Corporativo ══ */}
-            <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
+            <hr className="border-[#08526E] mt-4 mb-4" />
+            <div className="flex flex-col gap-4">
               {senioridade && (
                 <FormField control={form.control} name="diretoria_id" render={({ field }) => (
                   <FormItem>
@@ -646,114 +665,117 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
 
             {/* ══ GRUPO 2: Alocação (BU → Torre → Squad) ══ */}
             {(showBU || showTorre || showSquad) && (
-              <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
-                {showBU && (
-                  <FormField control={form.control} name="bu_id" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Business Unit</FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
-                        value={field.value ?? ""}
-                        disabled={isDesligado}
-                      >
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                          {businessUnits.map((bu: BusinessUnit) => (
-                            <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
-
-                {showTorre && (
-                  <FormField control={form.control} name="torre_ids" render={() => (
-                    <FormItem>
-                      <FormLabel>
-                        Torre
-                        <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>
-                      </FormLabel>
-                      {form.watch("torre_ids").length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {form.watch("torre_ids").map((id) => {
-                            const torre = torres.find((t: Torre) => t.id === id);
-                            return (
-                              <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                                {torre?.nome ?? id}
-                                <button type="button" onClick={() => toggleTorre(id)} className="hover:text-destructive">
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <Select onValueChange={(v) => toggleTorre(v)} value="" disabled={isDesligado}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {torresDisponiveis
-                            .filter((t: Torre) => !form.watch("torre_ids").includes(t.id))
-                            .map((t: Torre) => (
-                              <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+              <>
+                <hr className="border-[#08526E] mt-4 mb-4" />
+                <div className="flex flex-col gap-4">
+                  {showBU && (
+                    <FormField control={form.control} name="bu_id" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Unit</FormLabel>
+                        <Select
+                          onValueChange={(v) => field.onChange(v === "nenhuma" ? null : v)}
+                          value={field.value ?? ""}
+                          disabled={isDesligado}
+                        >
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                            {businessUnits.map((bu: BusinessUnit) => (
+                              <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
 
-                {showSquad && (
-                  <FormField control={form.control} name="squad_ids" render={() => (
-                    <FormItem>
-                      <FormLabel>
-                        Squad
-                        {isApenasSquad
-                          ? <span className="text-xs text-muted-foreground ml-1">(opcional, pode selecionar mais de uma)</span>
-                          : <span className="text-xs text-muted-foreground ml-1">(opcional — vazio = todas as squads das torres)</span>
-                        }
-                      </FormLabel>
-                      {form.watch("squad_ids").length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {form.watch("squad_ids").map((id) => {
-                            const squad = squads.find((s) => s.id === id);
-                            return (
-                              <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                                {squad?.nome ?? id}
-                                <button type="button" onClick={() => toggleSquad(id)} className="hover:text-destructive">
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <Select
-                        onValueChange={(v) => toggleSquad(v)}
-                        value=""
-                        disabled={isDesligado || (showTorre && torreIds.length === 0)}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={showTorre && torreIds.length === 0 ? "Selecione uma Torre primeiro" : undefined} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {squadsDisponiveis
-                            .filter((s) => !form.watch("squad_ids").includes(s.id))
-                            .map((s) => (
-                              <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
-              </div>
+                  {showTorre && (
+                    <FormField control={form.control} name="torre_ids" render={() => (
+                      <FormItem>
+                        <FormLabel>
+                          Torre
+                          <span className="text-xs text-muted-foreground ml-1">(pode selecionar mais de uma)</span>
+                        </FormLabel>
+                        {form.watch("torre_ids").length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {form.watch("torre_ids").map((id) => {
+                              const torre = torres.find((t: Torre) => t.id === id);
+                              return (
+                                <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                                  {torre?.nome ?? id}
+                                  <button type="button" onClick={() => toggleTorre(id)} className="hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Select onValueChange={(v) => toggleTorre(v)} value="" disabled={isDesligado}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {torresDisponiveis
+                              .filter((t: Torre) => !form.watch("torre_ids").includes(t.id))
+                              .map((t: Torre) => (
+                                <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+
+                  {showSquad && (
+                    <FormField control={form.control} name="squad_ids" render={() => (
+                      <FormItem>
+                        <FormLabel>
+                          Squad
+                          {isApenasSquad
+                            ? <span className="text-xs text-muted-foreground ml-1">(opcional, pode selecionar mais de uma)</span>
+                            : <span className="text-xs text-muted-foreground ml-1">(opcional — vazio = todas as squads das torres)</span>
+                          }
+                        </FormLabel>
+                        {form.watch("squad_ids").length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {form.watch("squad_ids").map((id) => {
+                              const squad = squads.find((s) => s.id === id);
+                              return (
+                                <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                                  {squad?.nome ?? id}
+                                  <button type="button" onClick={() => toggleSquad(id)} className="hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Select
+                          onValueChange={(v) => toggleSquad(v)}
+                          value=""
+                          disabled={isDesligado || (showTorre && torreIds.length === 0)}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={showTorre && torreIds.length === 0 ? "Selecione uma Torre primeiro" : undefined} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {squadsDisponiveis
+                              .filter((s) => !form.watch("squad_ids").includes(s.id))
+                              .map((s) => (
+                                <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+                </div>
+              </>
             )}
 
             {isDesligado && (
@@ -762,9 +784,9 @@ export function ColaboradorForm({ open, onClose, onSubmit, initialData, isLoadin
               </p>
             )}
 
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={isLoading}>
+            <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
+              <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">Cancelar</Button>
+              <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Cadastrar"}
               </Button>
             </DialogFooter>

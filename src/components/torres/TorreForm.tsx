@@ -114,13 +114,13 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
                 <DialogHeader>
-                    <DialogTitle>{isEdit ? "Editar Torre" : "Nova Torre"}</DialogTitle>
+                    <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Torre" : "Nova Torre"}</DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                             {/* Nome */}
@@ -155,8 +155,9 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
 
                             {/* Dynamic leadership fields */}
                             {buConfig && buConfig.campos_lideranca.length > 0 && (
-                                <div className="sm:col-span-2 space-y-4">
-                                    <h3 className="text-sm font-semibold text-muted-foreground">Liderança</h3>
+                                <div className="sm:col-span-2 flex flex-col gap-4">
+                                    <hr className="border-[#08526E] mt-4 mb-4" />
+                                    <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {buConfig.campos_lideranca.map((campo) => {
                                             const opcoes = colaboradores.filter((c) =>
@@ -208,9 +209,11 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
                             )}
                         </div>
 
-                        <DialogFooter className="gap-2 mt-4">
-                            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                            <Button type="submit" disabled={isLoading}>
+                        <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
+                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                                 {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Torre"}
                             </Button>
                         </DialogFooter>

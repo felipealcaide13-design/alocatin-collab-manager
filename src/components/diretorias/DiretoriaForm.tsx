@@ -90,9 +90,9 @@ export function DiretoriaForm({
 
     return (
         <Form {...form}>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="bg-white border rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-4">Informações Gerais</h3>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4">
+                    <h3 className="text-sm font-semibold text-[#0a688a]">Informações Gerais</h3>
                     
                     <FormField
                         control={form.control}
@@ -150,11 +150,11 @@ export function DiretoriaForm({
                     />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={onCancel} className="rounded-full">
+                <div className="flex justify-end gap-2 sm:space-x-0 mt-4 pt-2">
+                    <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={isLoading} className="rounded-full">
+                    <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
                         {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Cadastrar"}
                     </Button>
                 </div>

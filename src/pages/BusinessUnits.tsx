@@ -352,14 +352,14 @@ export default function BusinessUnits() {
                                     <Settings className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="relative w-full max-w-sm shrink-0">
+                            <div className="relative w-full max-w-[200px] shrink-0">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input placeholder="Buscar BUs..." value={searchBU}
                                     onChange={(e) => setSearchBU(e.target.value)} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
                         </div>
 
-                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
+                        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -439,14 +439,14 @@ export default function BusinessUnits() {
                                     <Settings className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="relative w-full max-w-sm shrink-0">
+                            <div className="relative w-full max-w-[200px] shrink-0">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input placeholder="Buscar torres..." value={searchTorre}
                                     onChange={(e) => { setSearchTorre(e.target.value); setPageTorre(1); }} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
                         </div>
 
-                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
+                        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
@@ -528,44 +528,49 @@ export default function BusinessUnits() {
                 {/* SQUADS TAB */}
                 <TabsContent value="squads" className="outline-none">
                     <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
-                        <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
-                            <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-                                <Button className="rounded-full" onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
-                                    <Plus className="mr-2 h-4 w-4" /> Nova Squad
-                                </Button>
-                                <div className="flex items-center gap-2">
-                                    <Select value={filterSquadTorre} onValueChange={(v) => { setFilterSquadTorre(v); setPageSquad(1); }}>
-                                        <SelectTrigger className="w-[190px] rounded-full border-muted bg-transparent">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todas as Torres</SelectItem>
-                                            {torres.map((t) => (
-                                                <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={filterSquadContrato} onValueChange={(v) => { setFilterSquadContrato(v); setPageSquad(1); }}>
-                                        <SelectTrigger className="w-[190px] rounded-full border-muted bg-transparent">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos os Contratos</SelectItem>
-                                            {contratos.map((c) => (
-                                                <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <Button className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]" onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
+                                <Plus className="mr-2 h-4 w-4" /> Nova Squad
+                            </Button>
+
+                            <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                                <Select value={filterSquadTorre} onValueChange={(v) => { setFilterSquadTorre(v); setPageSquad(1); }}>
+                                    <SelectTrigger className="w-full md:w-[180px] h-10 rounded-full font-normal">
+                                        <SelectValue placeholder="Todas as Torres" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Torres</SelectItem>
+                                        {torres.map((t) => (
+                                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={filterSquadContrato} onValueChange={(v) => { setFilterSquadContrato(v); setPageSquad(1); }}>
+                                    <SelectTrigger className="w-full md:w-[180px] h-10 rounded-full font-normal">
+                                        <SelectValue placeholder="Todos os Contratos" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Contratos</SelectItem>
+                                        {contratos.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <div className="relative w-full max-w-[200px] shrink-0">
+                                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Buscar squads..."
+                                        value={searchSquad}
+                                        onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }}
+                                        className="pl-9 bg-muted border-0 rounded-full"
+                                    />
                                 </div>
-                            </div>
-                            <div className="relative w-full xl:max-w-sm shrink-0">
-                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Buscar squads..." value={searchSquad}
-                                    onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
                         </div>
 
-                        <div className="rounded-[16px] border border-muted bg-card overflow-hidden">
+                        <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
