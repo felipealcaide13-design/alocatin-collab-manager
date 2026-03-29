@@ -92,8 +92,6 @@ export function DiretoriaForm({
         <Form {...form}>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
-                    <h3 className="text-sm font-semibold text-[#0a688a]">Informações Gerais</h3>
-                    
                     <FormField
                         control={form.control}
                         name="nome"
@@ -102,25 +100,6 @@ export function DiretoriaForm({
                                 <FormLabel>Nome da Diretoria *</FormLabel>
                                 <FormControl>
                                     <Input {...field} placeholder="Ex: Tecnologia" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="descricao"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Descrição</FormLabel>
-                                <FormControl>
-                                    <Textarea
-                                        {...field}
-                                        placeholder="Breve descrição da diretoria..."
-                                        rows={3}
-                                        className="rounded-2xl"
-                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -142,6 +121,25 @@ export function DiretoriaForm({
                                         onChange={field.onChange}
                                         options={colaboradores}
                                         isLoading={isColabsLoading}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="descricao"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Descrição</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        {...field}
+                                        placeholder="Breve descrição da diretoria..."
+                                        rows={3}
+                                        className="rounded-2xl"
                                     />
                                 </FormControl>
                                 <FormMessage />

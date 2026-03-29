@@ -232,7 +232,7 @@ export default function Colaboradores() {
         <KpiCard icon={Sparkle} label="Especialidades em uso" value={`${kpis.pctEspecialidades}%`} />
         <KpiCard icon={ShieldCheck} label="Líderes diretos únicos" value={kpis.lideresUnicos} />
         <KpiCard icon={CalendarClock} label="Média de duração" value={kpis.mediaDuracaoStr} />
-        <KpiCard icon={UserMinus} label="Deletados (12 meses)" value={kpis.deletedLast12} />
+        <KpiCard icon={UserMinus} label="Turnover (Últimos 12m)" value={kpis.deletedLast12} />
       </div>
 
       {/* Main container */}

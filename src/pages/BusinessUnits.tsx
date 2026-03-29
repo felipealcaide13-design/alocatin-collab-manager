@@ -644,29 +644,45 @@ export default function BusinessUnits() {
                 </TabsContent>
             </Tabs>
 
+            {/* Config Modal */}
             <Dialog open={configModalOpen} onOpenChange={setConfigModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto w-[90vw]">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
                     <DialogHeader>
-                        <DialogTitle>{activeTab === "bus" ? "Configuração de BU" : "Configuração de Torre"}</DialogTitle>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{activeTab === "bus" ? "Configuração de BU" : "Configuração de Torre"}</DialogTitle>
                         <DialogDescription>
                             Configure os campos que serão solicitados no formulário.
                         </DialogDescription>
                     </DialogHeader>
                     {configModalOpen && (
-                        <BUTorreConfigTab businessUnits={businessUnits} defaultTab={activeTab === "bus" ? "bu" : "torre"} hideTabs={true} />
+                        <BUTorreConfigTab 
+                            businessUnits={businessUnits} 
+                            defaultTab={activeTab === "bus" ? "bu" : "torre"} 
+                            hideTabs={true} 
+                            onCancel={() => setConfigModalOpen(false)}
+                        />
                     )}
                 </DialogContent>
             </Dialog>
-            <BusinessUnitForm
-                open={buFormOpen}
-                onClose={() => { setBuFormOpen(false); setEditBUTarget(null); }}
-                onSubmit={async (values) => {
-                    if (editBUTarget) await updateBUMutation.mutateAsync({ id: editBUTarget.id, data: values });
-                    else await createBUMutation.mutateAsync(values);
-                }}
-                initialData={editBUTarget}
-                isLoading={createBUMutation.isPending || updateBUMutation.isPending}
-            />
+
+            {/* Business Unit creation/edit modal */}
+            <Dialog open={buFormOpen} onOpenChange={(v) => { if (!v) { setBuFormOpen(false); setEditBUTarget(null); } }}>
+                <DialogContent className="max-w-lg overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{editBUTarget ? "Editar Business Unit" : "Nova Business Unit"}</DialogTitle>
+                    </DialogHeader>
+                    <BusinessUnitForm
+                        onCancel={() => { setBuFormOpen(false); setEditBUTarget(null); }}
+                        onSubmit={async (values) => {
+                            if (editBUTarget) await updateBUMutation.mutateAsync({ id: editBUTarget.id, data: values });
+                            else await createBUMutation.mutateAsync(values);
+                            setBuFormOpen(false);
+                            setEditBUTarget(null);
+                        }}
+                        initialData={editBUTarget}
+                        isLoading={createBUMutation.isPending || updateBUMutation.isPending}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <BUDeleteDialog
                 open={!!deleteBUTarget}
@@ -685,17 +701,25 @@ export default function BusinessUnits() {
                 colaboradores={colaboradores}
             />
 
-            {/* Torre modals */}
-            <TorreForm
-                open={torreFormOpen}
-                onClose={() => { setTorreFormOpen(false); setEditTorreTarget(null); }}
-                onSubmit={async (values) => {
-                    if (editTorreTarget) await updateTorreMutation.mutateAsync({ id: editTorreTarget.id, data: values });
-                    else await createTorreMutation.mutateAsync(values);
-                }}
-                initialData={editTorreTarget}
-                isLoading={createTorreMutation.isPending || updateTorreMutation.isPending}
-            />
+            {/* Torre creation/edit modal */}
+            <Dialog open={torreFormOpen} onOpenChange={(v) => { if (!v) { setTorreFormOpen(false); setEditTorreTarget(null); } }}>
+                <DialogContent className="max-w-lg overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{editTorreTarget ? "Editar Torre" : "Nova Torre"}</DialogTitle>
+                    </DialogHeader>
+                    <TorreForm
+                        onCancel={() => { setTorreFormOpen(false); setEditTorreTarget(null); }}
+                        onSubmit={async (values) => {
+                            if (editTorreTarget) await updateTorreMutation.mutateAsync({ id: editTorreTarget.id, data: values });
+                            else await createTorreMutation.mutateAsync(values);
+                            setTorreFormOpen(false);
+                            setEditTorreTarget(null);
+                        }}
+                        initialData={editTorreTarget}
+                        isLoading={createTorreMutation.isPending || updateTorreMutation.isPending}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <TorreDeleteDialog
                 open={!!deleteTorreTarget}
@@ -716,26 +740,34 @@ export default function BusinessUnits() {
                 businessUnits={businessUnits}
             />
 
-            {/* Squad modals */}
-            <SquadForm
-                open={squadFormOpen}
-                onClose={() => { setSquadFormOpen(false); setEditSquadTarget(null); }}
-                onSubmit={async (values) => {
-                    if (editSquadTarget) {
-                        // Calcula membros anteriores (fonte da verdade: colaboradores)
-                        const oldMemberIds = colaboradores
-                            .filter((c) => (c.squad_ids ?? []).includes(editSquadTarget.id))
-                            .map((c) => c.id);
-                        await updateSquadMutation.mutateAsync({ id: editSquadTarget.id, data: values });
-                        await colaboradorService.syncSquadMembers(editSquadTarget.id, oldMemberIds, values.membros ?? []);
-                        queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
-                    } else {
-                        await createSquadMutation.mutateAsync(values);
-                    }
-                }}
-                initialData={editSquadTarget}
-                isLoading={createSquadMutation.isPending || updateSquadMutation.isPending}
-            />
+            {/* Squad creation/edit modal */}
+            <Dialog open={squadFormOpen} onOpenChange={(v) => { if (!v) { setSquadFormOpen(false); setEditSquadTarget(null); } }}>
+                <DialogContent className="max-w-lg overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{editSquadTarget ? "Editar Squad" : "Novo Squad"}</DialogTitle>
+                    </DialogHeader>
+                    <SquadForm
+                        onCancel={() => { setSquadFormOpen(false); setEditSquadTarget(null); }}
+                        onSubmit={async (values) => {
+                            if (editSquadTarget) {
+                                // Calcula membros anteriores (fonte da verdade: colaboradores)
+                                const oldMemberIds = colaboradores
+                                    .filter((c) => (c.squad_ids ?? []).includes(editSquadTarget.id))
+                                    .map((c) => c.id);
+                                await updateSquadMutation.mutateAsync({ id: editSquadTarget.id, data: values });
+                                await colaboradorService.syncSquadMembers(editSquadTarget.id, oldMemberIds, values.membros ?? []);
+                                queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
+                            } else {
+                                await createSquadMutation.mutateAsync(values);
+                            }
+                            setSquadFormOpen(false);
+                            setEditSquadTarget(null);
+                        }}
+                        initialData={editSquadTarget}
+                        isLoading={createSquadMutation.isPending || updateSquadMutation.isPending}
+                    />
+                </DialogContent>
+            </Dialog>
 
             <TorreDeleteDialog
                 open={!!deleteSquadTarget}

@@ -4,7 +4,6 @@ import { z } from "zod";
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,14 +25,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface TorreFormProps {
-    open: boolean;
-    onClose: () => void;
+    onCancel: () => void;
     onSubmit: (values: FormValues) => Promise<void>;
     initialData?: Torre | null;
     isLoading?: boolean;
 }
 
-export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: TorreFormProps) {
+export function TorreForm({ onCancel, onSubmit, initialData, isLoading }: TorreFormProps) {
     const isEdit = !!initialData;
 
     const { data: colaboradores = [] } = useQuery({
@@ -75,24 +73,22 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
     }, [watchedBuId, form]);
 
     useEffect(() => {
-        if (open) {
-            if (initialData) {
-                form.reset({
-                    nome: initialData.nome,
-                    bu_id: initialData.bu_id,
-                    liderancas: ((initialData as any).liderancas as Record<string, string | null>) ?? {},
-                    descricao: initialData.descricao || "",
-                });
-            } else {
-                form.reset({
-                    nome: "",
-                    bu_id: null,
-                    liderancas: {},
-                    descricao: "",
-                });
-            }
+        if (initialData) {
+            form.reset({
+                nome: initialData.nome,
+                bu_id: initialData.bu_id,
+                liderancas: ((initialData as any).liderancas as Record<string, string | null>) ?? {},
+                descricao: initialData.descricao || "",
+            });
+        } else {
+            form.reset({
+                nome: "",
+                bu_id: null,
+                liderancas: {},
+                descricao: "",
+            });
         }
-    }, [open, initialData, form]);
+    }, [initialData, form]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
         const payload = { ...values };
@@ -113,113 +109,111 @@ export function TorreForm({ open, onClose, onSubmit, initialData, isLoading }: T
     const showDescricao = buConfig !== null && buConfig.descricao_habilitada === true;
 
     return (
-        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
-                <DialogHeader>
-                    <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Torre" : "Nova Torre"}</DialogTitle>
-                </DialogHeader>
+        <Form {...form}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                <Form {...form}>
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Nome */}
+                    <FormField control={form.control} name="nome" render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                            <FormLabel>Nome da Torre *</FormLabel>
+                            <FormControl>
+                                <Input {...field} placeholder="Ex: Torre Pagamentos" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
 
-                            {/* Nome */}
-                            <FormField control={form.control} name="nome" render={({ field }) => (
-                                <FormItem className="sm:col-span-2">
-                                    <FormLabel>Nome da Torre *</FormLabel>
-                                    <FormControl>
-                                        <Input {...field} placeholder="Ex: Torre Pagamentos" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
+                    {/* Business Unit */}
+                    <FormField control={form.control} name="bu_id" render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                            <FormLabel>Business Unit</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="none">Nenhuma</SelectItem>
+                                    {businessUnits.map((bu) => (
+                                        <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
 
-                            {/* Business Unit */}
-                            <FormField control={form.control} name="bu_id" render={({ field }) => (
-                                <FormItem className="sm:col-span-2">
-                                    <FormLabel>Business Unit</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                        <FormControl>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="none">Nenhuma</SelectItem>
-                                            {businessUnits.map((bu) => (
-                                                <SelectItem key={bu.id} value={bu.id}>{bu.nome}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-
-                            {/* Dynamic leadership fields */}
-                            {buConfig && buConfig.campos_lideranca.length > 0 && (
-                                <div className="sm:col-span-2 flex flex-col gap-4">
-                                    <hr className="border-[#08526E] mt-4 mb-4" />
-                                    <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {buConfig.campos_lideranca.map((campo) => {
-                                            const opcoes = colaboradores.filter((c) =>
-                                                c.senioridade === campo.senioridade &&
-                                                (campo.diretoria_id === "" || c.diretoria_id === campo.diretoria_id)
-                                            );
-                                            return (
-                                                <FormField
-                                                    key={campo.id}
-                                                    control={form.control}
-                                                    name={`liderancas.${campo.id}`}
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>{campo.nome}</FormLabel>
-                                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                                                <FormControl>
-                                                                    <SelectTrigger disabled={configLoading}>
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                </FormControl>
-                                                                <SelectContent>
-                                                                    <SelectItem value="none">Nenhum</SelectItem>
-                                                                    {opcoes.map((c) => (
-                                                                        <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Descrição — shown only if enabled in config (or no config) */}
-                            {showDescricao && (
-                                <FormField control={form.control} name="descricao" render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
-                                        <FormLabel>Descrição</FormLabel>
-                                        <FormControl>
-                                            <Textarea {...field} value={field.value || ""} placeholder="Descrição opcional..." />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            )}
+                    {/* Dynamic leadership fields */}
+                    {buConfig && buConfig.campos_lideranca.length > 0 && (
+                        <div className="sm:col-span-2 flex flex-col gap-4">
+                            <hr className="border-[#08526E] mt-4 mb-4" />
+                            <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {buConfig.campos_lideranca.map((campo) => {
+                                    const opcoes = colaboradores.filter((c) =>
+                                        c.senioridade === campo.senioridade &&
+                                        (campo.diretoria_id === "" || c.diretoria_id === campo.diretoria_id)
+                                    );
+                                    return (
+                                        <FormField
+                                            key={campo.id}
+                                            control={form.control}
+                                            name={`liderancas.${campo.id}`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{campo.nome}</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                                        <FormControl>
+                                                            <SelectTrigger disabled={configLoading}>
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">Nenhum</SelectItem>
+                                                            {opcoes.map((c) => (
+                                                                <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    );
+                                })}
+                            </div>
                         </div>
+                    )}
 
-                        <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
-                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
-                                {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Torre"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                    {/* Descrição — shown only if enabled in config. It is LAST here. */}
+                    {showDescricao && (
+                        <FormField control={form.control} name="descricao" render={({ field }) => (
+                            <FormItem className="sm:col-span-2">
+                                <FormLabel>Descrição</FormLabel>
+                                <FormControl>
+                                    <Textarea 
+                                        {...field} 
+                                        value={field.value || ""} 
+                                        placeholder="Descrição opcional..." 
+                                        className="rounded-2xl bg-white"
+                                        rows={3} 
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-2 sm:space-x-0 mt-4 pt-2">
+                    <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                        Cancelar
+                    </Button>
+                    <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
+                        {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Torre"}
+                    </Button>
+                </div>
+            </form>
+        </Form>
     );
 }

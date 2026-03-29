@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -35,14 +34,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface SquadFormProps {
-    open: boolean;
-    onClose: () => void;
+    onCancel: () => void;
     onSubmit: (values: FormValues) => Promise<void>;
     initialData?: Squad | null;
     isLoading?: boolean;
 }
 
-export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: SquadFormProps) {
+export function SquadForm({ onCancel, onSubmit, initialData, isLoading }: SquadFormProps) {
     const isEdit = !!initialData;
     const [comboOpen, setComboOpen] = useState(false);
 
@@ -77,32 +75,30 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
     });
 
     useEffect(() => {
-        if (open) {
-            if (initialData) {
-                // Fonte da verdade: colaboradores que têm este squad_id
-                const membrosAtuais = colaboradores
-                    .filter((c) => (c.squad_ids ?? []).includes(initialData.id))
-                    .map((c) => c.id);
-                form.reset({
-                    nome: initialData.nome,
-                    torre_id: initialData.torre_id,
-                    contrato_id: initialData.contrato_id || null,
-                    lider: initialData.lider,
-                    membros: membrosAtuais,
-                    descricao: initialData.descricao || "",
-                });
-            } else {
-                form.reset({
-                    nome: "",
-                    torre_id: "",
-                    contrato_id: null,
-                    lider: null,
-                    membros: [],
-                    descricao: "",
-                });
-            }
+        if (initialData) {
+            // Fonte da verdade: colaboradores que têm este squad_id
+            const membrosAtuais = colaboradores
+                .filter((c) => (c.squad_ids ?? []).includes(initialData.id))
+                .map((c) => c.id);
+            form.reset({
+                nome: initialData.nome,
+                torre_id: initialData.torre_id,
+                contrato_id: initialData.contrato_id || null,
+                lider: initialData.lider,
+                membros: membrosAtuais,
+                descricao: initialData.descricao || "",
+            });
+        } else {
+            form.reset({
+                nome: "",
+                torre_id: "",
+                contrato_id: null,
+                lider: null,
+                membros: [],
+                descricao: "",
+            });
         }
-    }, [open, initialData, form, colaboradores]);
+    }, [initialData, form, colaboradores]);
 
     const handleSubmit = form.handleSubmit(async (values) => {
         const payload = { ...values };
@@ -111,153 +107,151 @@ export function SquadForm({ open, onClose, onSubmit, initialData, isLoading }: S
     });
 
     return (
-        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
-                <DialogHeader>
-                    <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Squad" : "Novo Squad"}</DialogTitle>
-                </DialogHeader>
+        <Form {...form}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-                <Form {...form}>
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <FormField control={form.control} name="nome" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Nome do Squad *</FormLabel>
+                        <FormControl>
+                            <Input {...field} placeholder="Ex: Squad Core Pagamentos" />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
 
-                        <FormField control={form.control} name="nome" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nome do Squad *</FormLabel>
+                <FormField control={form.control} name="torre_id" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Torre Associada *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {torres.map((t) => (
+                                    <SelectItem key={t.id} value={t.id}>
+                                        {t.nome}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <FormField control={form.control} name="contrato_id" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Contrato Relacionado</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="none">Nenhum</SelectItem>
+                                {contratos.map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                        {c.nome} ({c.cliente})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                {/* Multi-select Members */}
+                <FormField control={form.control} name="membros" render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Membros ({field.value.length})</FormLabel>
+                        <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                            <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Input {...field} placeholder="Ex: Squad Core Pagamentos" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="torre_id" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Torre Associada *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {torres.map((t) => (
-                                            <SelectItem key={t.id} value={t.id}>
-                                                {t.nome}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="contrato_id" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Contrato Relacionado</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || undefined}>
-                                    <FormControl>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="none">Nenhum</SelectItem>
-                                        {contratos.map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                {c.nome} ({c.cliente})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        {/* Multi-select Members */}
-                        <FormField control={form.control} name="membros" render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Membros ({field.value.length})</FormLabel>
-                                <Popover open={comboOpen} onOpenChange={setComboOpen}>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button variant="outline" role="combobox" aria-expanded={comboOpen} className={cn("justify-between w-full h-auto min-h-[40px] font-normal", !field.value.length && "text-muted-foreground")}>
-                                                <div className="flex flex-wrap gap-1 items-center">
-                                                    {field.value.length === 0 ? "Selecione membros..." : (
-                                                        field.value.slice(0, 3).map((colabId) => {
-                                                            const colab = colaboradoresSquad.find(c => c.id === colabId);
-                                                            return (
-                                                                <Badge key={colabId} variant="secondary" className="mr-1 mb-1 font-normal">
-                                                                    {colab ? colab.nomeCompleto : "Desconhecido"}
-                                                                    <button
-                                                                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-muted"
-                                                                        onKeyDown={(e) => { if (e.key === "Enter") { field.onChange(field.value.filter(i => i !== colabId)); } }}
-                                                                        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                                                                        onClick={() => field.onChange(field.value.filter(i => i !== colabId))}
-                                                                    >
-                                                                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                                                    </button>
-                                                                </Badge>
-                                                            )
-                                                        })
-                                                    )}
-                                                    {field.value.length > 3 && (
-                                                        <Badge variant="secondary" className="mr-1 mb-1 font-normal">+{field.value.length - 3} outros</Badge>
-                                                    )}
-                                                </div>
-                                                <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Buscar colaborador..." />
-                                            <CommandList>
-                                                <CommandEmpty>Nenhum colaborador encontrado.</CommandEmpty>
-                                                <CommandGroup>
-                                                    <ScrollArea className="h-64">
-                                                        {colaboradoresSquad.map((colab) => (
-                                                            <CommandItem
-                                                                key={colab.id}
-                                                                value={colab.nomeCompleto}
-                                                                onSelect={() => {
-                                                                    if (field.value.includes(colab.id)) {
-                                                                        field.onChange(field.value.filter((id) => id !== colab.id));
-                                                                    } else {
-                                                                        field.onChange([...field.value, colab.id]);
-                                                                    }
-                                                                }}
+                                    <Button variant="outline" role="combobox" aria-expanded={comboOpen} className={cn("justify-between w-full h-auto min-h-[40px] font-normal rounded-full px-4", !field.value.length && "text-muted-foreground")}>
+                                        <div className="flex flex-wrap gap-1 items-center">
+                                            {field.value.length === 0 ? "Selecione membros..." : (
+                                                field.value.slice(0, 3).map((colabId) => {
+                                                    const colab = colaboradoresSquad.find(c => c.id === colabId);
+                                                    return (
+                                                        <Badge key={colabId} variant="secondary" className="mr-1 mb-1 font-normal bg-white border border-border shadow-sm rounded-full">
+                                                            {colab ? colab.nomeCompleto : "Desconhecido"}
+                                                            <button
+                                                                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-muted"
+                                                                onKeyDown={(e) => { if (e.key === "Enter") { field.onChange(field.value.filter(i => i !== colabId)); } }}
+                                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                onClick={() => field.onChange(field.value.filter(i => i !== colabId))}
                                                             >
-                                                                <Check className={cn("mr-2 h-4 w-4", field.value.includes(colab.id) ? "opacity-100" : "opacity-0")} />
-                                                                {colab.nomeCompleto} <span className="text-muted-foreground ml-2 text-xs">({colab.senioridade})</span>
-                                                            </CommandItem>
-                                                        ))}
-                                                    </ScrollArea>
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
-                        <FormField control={form.control} name="descricao" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Descrição</FormLabel>
-                                <FormControl>
-                                    <Textarea {...field} value={field.value || ""} placeholder="Descrição opcional..." rows={3} />
+                                                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                                            </button>
+                                                        </Badge>
+                                                    )
+                                                })
+                                            )}
+                                            {field.value.length > 3 && (
+                                                <Badge variant="secondary" className="mr-1 mb-1 font-normal bg-white border border-border shadow-sm rounded-full">+{field.value.length - 3} outros</Badge>
+                                            )}
+                                        </div>
+                                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+                                    </Button>
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Buscar colaborador..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum colaborador encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            <ScrollArea className="h-64">
+                                                {colaboradoresSquad.map((colab) => (
+                                                    <CommandItem
+                                                        key={colab.id}
+                                                        value={colab.nomeCompleto}
+                                                        onSelect={() => {
+                                                            if (field.value.includes(colab.id)) {
+                                                                field.onChange(field.value.filter((id) => id !== colab.id));
+                                                            } else {
+                                                                field.onChange([...field.value, colab.id]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", field.value.includes(colab.id) ? "opacity-100" : "opacity-0")} />
+                                                        {colab.nomeCompleto} <span className="text-muted-foreground ml-2 text-xs">({colab.senioridade})</span>
+                                                    </CommandItem>
+                                                ))}
+                                            </ScrollArea>
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )} />
 
-                        <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
-                            <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
-                                {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Squad"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                <FormField control={form.control} name="descricao" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Descrição</FormLabel>
+                        <FormControl>
+                            <Textarea 
+                                {...field} 
+                                value={field.value || ""} 
+                                placeholder="Descrição opcional..." 
+                                className="rounded-2xl bg-white"
+                                rows={3} 
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <div className="flex justify-end gap-2 sm:space-x-0 mt-4 pt-2">
+                    <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                        Cancelar
+                    </Button>
+                    <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
+                        {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Squad"}
+                    </Button>
+                </div>
+            </form>
+        </Form>
     );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Lock, ChevronUp, ChevronDown, Pencil, Trash2, Plus } from "lucide-react";
+import { FileText, ChevronUp, ChevronDown, Pencil, Trash2, Plus, Lock, NotebookPen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ interface Props {
   businessUnits: Array<{ id: string; nome: string }>;
   defaultTab?: "bu" | "torre";
   hideTabs?: boolean;
+  onCancel?: () => void;
 }
 
 // Reusable leadership fields manager
@@ -75,12 +76,12 @@ function LiderancaSection({ campos, diretorias, onChange }: LiderancaSectionProp
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-        Campos de Liderança
-      </h3>
+      <Label className="text-md font-medium mb-2 block">
+        Campos Liderança
+      </Label>
 
       {campos.length === 0 && !showAddForm && (
-        <p className="text-sm text-muted-foreground mb-3">Nenhum campo de liderança configurado.</p>
+        <p className="text-sm text-muted-foreground mb-1">Nenhum campo de liderança configurado.</p>
       )}
 
       <div className="space-y-2">
@@ -141,16 +142,16 @@ function LiderancaSection({ campos, diretorias, onChange }: LiderancaSectionProp
       )}
 
       {!showAddForm && (
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => { setShowAddForm(true); setEditingId(null); }}>
+        <Button variant="soft" size="sm" className="mt-1.5 rounded-full" onClick={() => { setShowAddForm(true); setEditingId(null); }}>
           <Plus className="h-4 w-4 mr-2" />
-          Adicionar Campo
+          Adicionar campo
         </Button>
       )}
     </div>
   );
 }
 
-export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs = false }: Props) {
+export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs = false, onCancel }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [diretorias, setDiretorias] = useState<Array<{ id: string; nome: string }>>([]);
@@ -169,7 +170,7 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
   useEffect(() => {
     diretoriaService.getAll().then((data) => {
       setDiretorias(data.map((d) => ({ id: d.id, nome: d.nome })));
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Load BU form config once
@@ -177,7 +178,7 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
     setBuLoading(true);
     configuracaoBUService.get()
       .then(setBuConfig)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setBuLoading(false));
   }, []);
 
@@ -230,11 +231,12 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
       {/* ── TORRE CONFIG ── */}
       <TabsContent value="torre" className="space-y-6 outline-none">
         <div className="w-full max-w-sm">
+          <Label className="text-sm font-medium mb-1.5 block text-[#0a688a]">Business Unit</Label>
           <Select
             value={selectedBuId ?? ""}
             onValueChange={(v) => setSelectedBuId(v || null)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="rounded-full bg-slate-50 border-slate-200">
               <SelectValue placeholder="Selecione uma Business Unit..." />
             </SelectTrigger>
             <SelectContent>
@@ -245,46 +247,33 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
           </Select>
         </div>
 
-        {!selectedBuId && (
-          <div className="rounded-xl border bg-muted/30 px-6 py-12 text-center text-muted-foreground">
-            Selecione uma Business Unit para configurar os campos do formulário de Torre.
-          </div>
-        )}
+        {/* Removed 'Selecione uma Business Unit' message per user request */}
 
         {selectedBuId && torreLoading && (
           <div className="text-muted-foreground text-sm">Carregando configuração...</div>
         )}
 
         {selectedBuId && !torreLoading && torreConfig && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Campos Fixos</h3>
-              <div className="flex flex-wrap gap-3">
-                <Card className="border-dashed">
-                  <CardContent className="flex items-center gap-2 px-4 py-3">
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Nome da Torre</span>
-                    <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
-                  </CardContent>
-                </Card>
-                <Card className="border-dashed">
-                  <CardContent className="flex items-center gap-2 px-4 py-3">
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Business Unit</span>
-                    <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Switch
-                id="torre-descricao-toggle"
-                checked={torreConfig.descricao_habilitada}
-                onCheckedChange={(checked) => setTorreConfig({ ...torreConfig, descricao_habilitada: checked })}
-              />
-              <Label htmlFor="torre-descricao-toggle" className="cursor-pointer">Incluir campo Descrição</Label>
-            </div>
+          <div className="space-y-8">
+            <Card className="overflow-hidden border-slate-200 bg-slate-50/50 shadow-sm sm:rounded-[20px]">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-4 items-center">
+                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center border border-slate-200 shadow-sm">
+                      <NotebookPen className="h-5 w-5 text-[#0a688a] opacity-60" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#262626]">Campo Descrição</p>
+                      <p className="text-xs text-muted-foreground">Habilitar bloco de notas opcional no formulário</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={torreConfig.descricao_habilitada}
+                    onCheckedChange={(checked) => setTorreConfig({ ...torreConfig, descricao_habilitada: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             <LiderancaSection
               campos={torreConfig.campos_lideranca}
@@ -292,9 +281,12 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
               onChange={(campos) => setTorreConfig({ ...torreConfig, campos_lideranca: campos })}
             />
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveTorre} disabled={torreSaving}>
-                {torreSaving ? "Salvando..." : "Salvar Configuração"}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveTorre} disabled={torreSaving} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
+                {torreSaving ? "Salvando..." : "Salvar configuração"}
               </Button>
             </div>
           </div>
@@ -306,26 +298,26 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
         {buLoading ? (
           <div className="text-muted-foreground text-sm">Carregando configuração...</div>
         ) : (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Campos Fixos</h3>
-              <Card className="border-dashed w-fit">
-                <CardContent className="flex items-center gap-2 px-4 py-3">
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Nome</span>
-                  <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Switch
-                id="bu-descricao-toggle"
-                checked={buConfig.descricao_habilitada}
-                onCheckedChange={(checked) => setBuConfig({ ...buConfig, descricao_habilitada: checked })}
-              />
-              <Label htmlFor="bu-descricao-toggle" className="cursor-pointer">Incluir campo Descrição</Label>
-            </div>
+          <div className="space-y-8">
+            <Card className="overflow-hidden border-slate-200 bg-slate-50/50 shadow-sm sm:rounded-[20px]">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-4 items-center">
+                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center border border-slate-200 shadow-sm">
+                      <NotebookPen className="h-5 w-5 text-[#0a688a] opacity-60" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#262626]">Campo Descrição</p>
+                      <p className="text-xs text-muted-foreground">Habilitar bloco de notas opcional no formulário</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={buConfig.descricao_habilitada}
+                    onCheckedChange={(checked) => setBuConfig({ ...buConfig, descricao_habilitada: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
             <LiderancaSection
               campos={buConfig.campos_lideranca}
@@ -333,9 +325,12 @@ export function BUTorreConfigTab({ businessUnits, defaultTab = "torre", hideTabs
               onChange={(campos) => setBuConfig({ ...buConfig, campos_lideranca: campos })}
             />
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveBU} disabled={buSaving}>
-                {buSaving ? "Salvando..." : "Salvar Configuração"}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveBU} disabled={buSaving} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
+                {buSaving ? "Salvando..." : "Salvar configuração"}
               </Button>
             </div>
           </div>

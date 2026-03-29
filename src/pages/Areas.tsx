@@ -565,15 +565,21 @@ export default function Areas() {
             )}
 
             {/* Area form */}
-            <AreaForm
-                open={areaFormOpen}
-                onClose={() => { setAreaFormOpen(false); setAreaEditTarget(null); }}
-                onSubmit={handleAreaFormSubmit}
-                initialData={areaEditTarget ?? null}
-                defaultDiretoriaId={areaFormDiretoriaId}
-                existingEspecialidades={areaEditTarget ? getEspecialidadesByArea(areaEditTarget.id) : []}
-                isLoading={createAreaMutation.isPending || updateAreaMutation.isPending}
-            />
+            <Dialog open={areaFormOpen} onOpenChange={(v) => { if (!v) { setAreaFormOpen(false); setAreaEditTarget(null); } }}>
+                <DialogContent className="max-w-lg overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{areaEditTarget ? "Editar Área" : "Nova Área"}</DialogTitle>
+                    </DialogHeader>
+                    <AreaForm
+                        onCancel={() => { setAreaFormOpen(false); setAreaEditTarget(null); }}
+                        onSubmit={handleAreaFormSubmit}
+                        initialData={areaEditTarget ?? null}
+                        defaultDiretoriaId={areaFormDiretoriaId}
+                        existingEspecialidades={areaEditTarget ? getEspecialidadesByArea(areaEditTarget.id) : []}
+                        isLoading={createAreaMutation.isPending || updateAreaMutation.isPending}
+                    />
+                </DialogContent>
+            </Dialog>
 
             {/* Area delete */}
             <AreaDeleteDialog

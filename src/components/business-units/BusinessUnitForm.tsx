@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,20 +23,18 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
+  onCancel: () => void;
   onSubmit: (values: FormValues) => Promise<void>;
   initialData?: BusinessUnit | null;
   isLoading?: boolean;
 }
 
-export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoading }: Props) {
+export function BusinessUnitForm({ onCancel, onSubmit, initialData, isLoading }: Props) {
   const isEdit = !!initialData;
 
   const { data: buFormConfig = { descricao_habilitada: false, campos_lideranca: [] }, isSuccess: configLoaded } = useQuery({
     queryKey: ["configuracao_bu"],
     queryFn: () => configuracaoBUService.get(),
-    enabled: open,
   });
 
   const { data: colaboradores = [] } = useQuery({
@@ -51,14 +48,12 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
   });
 
   useEffect(() => {
-    if (open) {
-      form.reset(
-        initialData
-          ? { nome: initialData.nome, descricao: initialData.descricao || "", liderancas: initialData.liderancas ?? {} }
-          : { nome: "", descricao: "", liderancas: {} }
-      );
-    }
-  }, [open, initialData, form]);
+    form.reset(
+      initialData
+        ? { nome: initialData.nome, descricao: initialData.descricao || "", liderancas: initialData.liderancas ?? {} }
+        : { nome: "", descricao: "", liderancas: {} }
+    );
+  }, [initialData, form]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     const payload = { ...values };
@@ -74,91 +69,89 @@ export function BusinessUnitForm({ open, onClose, onSubmit, initialData, isLoadi
   });
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md overflow-y-auto bg-white border border-[#e0e0e0] shadow-xl sm:rounded-[24px] p-6">
-        <DialogHeader>
-          <DialogTitle className="text-lg text-[#262626] font-semibold tracking-normal">{isEdit ? "Editar Business Unit" : "Nova Business Unit"}</DialogTitle>
-        </DialogHeader>
+    <Form {...form}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Nome — always required */}
+        <FormField control={form.control} name="nome" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Nome *</FormLabel>
+            <FormControl>
+              <Input {...field} placeholder="Ex: BU Financeiro" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
 
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* Nome — always required */}
-            <FormField control={form.control} name="nome" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome *</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ex: BU Financeiro" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+        {/* Dynamic leadership fields */}
+        {configLoaded && buFormConfig.campos_lideranca.length > 0 && (
+          <>
+            <hr className="border-[#08526E] mt-4 mb-4" />
+            <div className="flex flex-col gap-4">
+              <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
+            {buFormConfig.campos_lideranca.map((campo) => {
+              const opcoes = colaboradores.filter((c) =>
+                c.senioridade === campo.senioridade &&
+                (campo.diretoria_id === "" || c.diretoria_id === campo.diretoria_id)
+              );
+              return (
+                <FormField
+                  key={campo.id}
+                  control={form.control}
+                  name={`liderancas.${campo.id}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{campo.nome}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {opcoes.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              );
+            })}
+            </div>
+          </>
+        )}
 
-            {/* Descrição — only if enabled in config */}
-            {buFormConfig.descricao_habilitada && (
-              <FormField control={form.control} name="descricao" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value || ""} placeholder="Descrição opcional..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+        {/* Descrição — only if enabled in config. Moved to LAST position */}
+        {buFormConfig.descricao_habilitada && (
+          <FormField control={form.control} name="descricao" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea 
+                  {...field} 
+                  value={field.value || ""} 
+                  placeholder="Descrição opcional..." 
+                  className="rounded-2xl bg-white"
+                  rows={3}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+        )}
 
-            {/* Dynamic leadership fields */}
-            {configLoaded && buFormConfig.campos_lideranca.length > 0 && (
-              <>
-                <hr className="border-[#08526E] mt-4 mb-4" />
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-semibold text-[#0a688a]">Liderança</h3>
-                {buFormConfig.campos_lideranca.map((campo) => {
-                  const opcoes = colaboradores.filter((c) =>
-                    c.senioridade === campo.senioridade &&
-                    (campo.diretoria_id === "" || c.diretoria_id === campo.diretoria_id)
-                  );
-                  return (
-                    <FormField
-                      key={campo.id}
-                      control={form.control}
-                      name={`liderancas.${campo.id}`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{campo.nome}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {opcoes.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.nomeCompleto}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  );
-                })}
-                </div>
-              </>
-            )}
-
-            <DialogFooter className="gap-2 sm:space-x-0 mt-4 pt-2">
-              <Button type="button" variant="outline" onClick={onClose} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
-                {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar BU"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        <div className="flex justify-end gap-2 sm:space-x-0 mt-4 pt-2">
+          <Button type="button" variant="outline" onClick={onCancel} className="rounded-full border-[#0a678a] text-[#08526e] hover:bg-slate-50 px-6 font-medium h-10 w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading} className="rounded-full bg-[#0a688a] hover:bg-[#08526e] px-6 font-medium h-10 text-white w-full sm:w-auto">
+            {isLoading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar BU"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
