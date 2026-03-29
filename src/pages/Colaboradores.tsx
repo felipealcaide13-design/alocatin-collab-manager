@@ -151,8 +151,8 @@ export default function Colaboradores() {
         {/* Filters and New Button Row */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <Button onClick={() => setFormOpen(true)} className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Colaborador
+            <Plus className="h-4 w-4" />
+            Novo colaborador
           </Button>
 
           <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
@@ -190,7 +190,7 @@ export default function Colaboradores() {
             <div className="relative w-full max-w-[200px] shrink-0">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome..."
+                placeholder="Buscar por nome"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="pl-9 bg-muted border-0 rounded-full"

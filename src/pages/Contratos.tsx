@@ -229,7 +229,7 @@ export default function Contratos() {
             subtitle={isLoading ? "Carregando..." : `${filtered.length} contrato(s) encontrado(s)`}
             action={
                 <Button variant="outline" className="rounded-full bg-[#E1ECF0] text-[#08526E] border-none hover:bg-[#d0e0e6] font-medium" onClick={handleExportCSV}>
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="h-4 w-4" />
                     Exportar
                 </Button>
             }
@@ -239,7 +239,7 @@ export default function Contratos() {
                 {/* Filters and New Button Row */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <Button onClick={() => { setEditTarget(null); setFormOpen(true); }} className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]">
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="h-4 w-4" />
                         Novo Contrato
                     </Button>
 

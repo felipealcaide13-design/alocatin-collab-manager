@@ -345,8 +345,8 @@ export default function BusinessUnits() {
                     <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
                             <div className="flex gap-4 w-full sm:w-auto">
-                                <Button className="rounded-full" onClick={() => { setEditBUTarget(null); setBuFormOpen(true); }}>
-                                    <Plus className="mr-2 h-4 w-4" /> Nova BU
+                                <Button className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]" onClick={() => { setEditBUTarget(null); setBuFormOpen(true); }}>
+                                    <Plus className="h-4 w-4" /> Nova BU
                                 </Button>
                                 <Button variant="soft" size="icon" className="rounded-full" onClick={() => setConfigModalOpen(true)}>
                                     <Settings className="h-4 w-4" />
@@ -354,76 +354,76 @@ export default function BusinessUnits() {
                             </div>
                             <div className="relative w-full max-w-[200px] shrink-0">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Buscar BUs..." value={searchBU}
+                                <Input placeholder="Buscar BU" value={searchBU}
                                     onChange={(e) => setSearchBU(e.target.value)} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
                         </div>
 
                         <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/40">
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortBU, "nome", setSortBU)}>
-                                                Nome<SortIcon col="nome" sort={sortBU} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortBU, "torres", setSortBU)}>
-                                                Torres<SortIcon col="torres" sort={sortBU} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Descrição</th>
-                                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loadingBUs ? (
-                                        [...Array(3)].map((_, i) => (
-                                            <tr key={i} className="border-b">
-                                                <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-10" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-48" /></td>
-                                                <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
-                                            </tr>
-                                        ))
-                                    ) : filteredBUs.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
-                                                Nenhuma Business Unit encontrada.
-                                            </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/40">
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortBU, "nome", setSortBU)}>
+                                                    Nome<SortIcon col="nome" sort={sortBU} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortBU, "torres", setSortBU)}>
+                                                    Torres<SortIcon col="torres" sort={sortBU} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Descrição</th>
+                                            <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
                                         </tr>
-                                    ) : (
-                                        filteredBUs.map((bu) => (
-                                            <tr key={bu.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                                <td className="px-4 py-3 font-medium text-foreground">{bu.nome}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                                                    {torres.filter(t => t.bu_id === bu.id).length}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell truncate max-w-xs">
-                                                    {bu.descricao || "—"}
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailBU(bu)}>
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditBUTarget(bu); setBuFormOpen(true); }}>
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteBUTarget(bu)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {loadingBUs ? (
+                                            [...Array(3)].map((_, i) => (
+                                                <tr key={i} className="border-b">
+                                                    <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-10" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-48" /></td>
+                                                    <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                                                </tr>
+                                            ))
+                                        ) : filteredBUs.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                                                    Nenhuma Business Unit encontrada.
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            filteredBUs.map((bu) => (
+                                                <tr key={bu.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                                    <td className="px-4 py-3 font-medium text-foreground">{bu.nome}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                                                        {torres.filter(t => t.bu_id === bu.id).length}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell truncate max-w-xs">
+                                                        {bu.descricao || "—"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailBU(bu)}>
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditBUTarget(bu); setBuFormOpen(true); }}>
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteBUTarget(bu)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
                     </div>
                 </TabsContent>
 
@@ -432,8 +432,8 @@ export default function BusinessUnits() {
                     <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
                             <div className="flex gap-4 w-full sm:w-auto">
-                                <Button className="rounded-full" onClick={() => { setEditTorreTarget(null); setTorreFormOpen(true); }}>
-                                    <Plus className="mr-2 h-4 w-4" /> Nova Torre
+                                <Button className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]" onClick={() => { setEditTorreTarget(null); setTorreFormOpen(true); }}>
+                                    <Plus className="h-4 w-4" /> Nova torre
                                 </Button>
                                 <Button variant="soft" size="icon" className="rounded-full" onClick={() => setConfigModalOpen(true)}>
                                     <Settings className="h-4 w-4" />
@@ -441,87 +441,87 @@ export default function BusinessUnits() {
                             </div>
                             <div className="relative w-full max-w-[200px] shrink-0">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Buscar torres..." value={searchTorre}
+                                <Input placeholder="Buscar torre" value={searchTorre}
                                     onChange={(e) => { setSearchTorre(e.target.value); setPageTorre(1); }} className="pl-9 bg-muted border-0 rounded-full" />
                             </div>
                         </div>
 
                         <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/40">
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "nome", setSortTorre)}>
-                                                Nome da Torre<SortIcon col="nome" sort={sortTorre} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "bu", setSortTorre)}>
-                                                BU<SortIcon col="bu" sort={sortTorre} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "squads_count", setSortTorre)}>
-                                                Squads<SortIcon col="squads_count" sort={sortTorre} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Contratos</th>
-                                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loadingTorres ? (
-                                        [...Array(3)].map((_, i) => (
-                                            <tr key={i} className="border-b">
-                                                <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-32" /></td>
-                                                <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
-                                            </tr>
-                                        ))
-                                    ) : paginatedTorres.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">Nenhuma torre encontrada.</td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/40">
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "nome", setSortTorre)}>
+                                                    Nome da Torre<SortIcon col="nome" sort={sortTorre} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "bu", setSortTorre)}>
+                                                    BU<SortIcon col="bu" sort={sortTorre} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortTorre, "squads_count", setSortTorre)}>
+                                                    Squads<SortIcon col="squads_count" sort={sortTorre} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Contratos</th>
+                                            <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
                                         </tr>
-                                    ) : (
-                                        paginatedTorres.map((t) => {
-                                            const torreSquads = squads.filter(s => s.torre_id === t.id);
-                                            const torreContratos = [...new Set(torreSquads.map(s => s.contrato_id).filter(Boolean))]
-                                                .map(cid => contratos.find(c => c.id === cid)?.nome)
-                                                .filter(Boolean);
-                                            return (
-                                            <tr key={t.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                                <td className="px-4 py-3 font-medium text-foreground">{t.nome}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                                                    {businessUnits.find(b => b.id === t.bu_id)?.nome ?? "—"}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{t.squads_count}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                                                    {torreContratos.length > 0 ? torreContratos.join(", ") : "—"}
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailTorre(t)}>
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditTorreTarget(t); setTorreFormOpen(true); }}>
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTorreTarget(t)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
+                                    </thead>
+                                    <tbody>
+                                        {loadingTorres ? (
+                                            [...Array(3)].map((_, i) => (
+                                                <tr key={i} className="border-b">
+                                                    <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-32" /></td>
+                                                    <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                                                </tr>
+                                            ))
+                                        ) : paginatedTorres.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">Nenhuma torre encontrada.</td>
                                             </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            paginatedTorres.map((t) => {
+                                                const torreSquads = squads.filter(s => s.torre_id === t.id);
+                                                const torreContratos = [...new Set(torreSquads.map(s => s.contrato_id).filter(Boolean))]
+                                                    .map(cid => contratos.find(c => c.id === cid)?.nome)
+                                                    .filter(Boolean);
+                                                return (
+                                                    <tr key={t.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                                        <td className="px-4 py-3 font-medium text-foreground">{t.nome}</td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                                                            {businessUnits.find(b => b.id === t.bu_id)?.nome ?? "—"}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{t.squads_count}</td>
+                                                        <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                                                            {torreContratos.length > 0 ? torreContratos.join(", ") : "—"}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailTorre(t)}>
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditTorreTarget(t); setTorreFormOpen(true); }}>
+                                                                    <Edit2 className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTorreTarget(t)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
                     </div>
                 </TabsContent>
 
@@ -530,7 +530,7 @@ export default function BusinessUnits() {
                     <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border space-y-4">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                             <Button className="rounded-full w-full md:w-auto px-6 font-medium bg-[#0a688a] hover:bg-[#08526e]" onClick={() => { setEditSquadTarget(null); setSquadFormOpen(true); }} disabled={torres.length === 0}>
-                                <Plus className="mr-2 h-4 w-4" /> Nova Squad
+                                <Plus className="h-4 w-4" /> Nova squad
                             </Button>
 
                             <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
@@ -561,7 +561,7 @@ export default function BusinessUnits() {
                                 <div className="relative w-full max-w-[200px] shrink-0">
                                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Buscar squads..."
+                                        placeholder="Buscar squad"
                                         value={searchSquad}
                                         onChange={(e) => { setSearchSquad(e.target.value); setPageSquad(1); }}
                                         className="pl-9 bg-muted border-0 rounded-full"
@@ -571,75 +571,75 @@ export default function BusinessUnits() {
                         </div>
 
                         <div className="bg-white rounded-[16px] border border-[#EDEDED] shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/40">
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "nome", setSortSquad)}>
-                                                Nome da Squad<SortIcon col="nome" sort={sortSquad} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "torre", setSortSquad)}>
-                                                Torre<SortIcon col="torre" sort={sortSquad} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "contrato", setSortSquad)}>
-                                                Contrato<SortIcon col="contrato" sort={sortSquad} />
-                                            </button>
-                                        </th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
-                                            <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "membros", setSortSquad)}>
-                                                Membros<SortIcon col="membros" sort={sortSquad} />
-                                            </button>
-                                        </th>
-                                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loadingSquads ? (
-                                        [...Array(3)].map((_, i) => (
-                                            <tr key={i} className="border-b">
-                                                <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                                                <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
-                                                <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></td>
-                                                <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
-                                            </tr>
-                                        ))
-                                    ) : paginatedSquads.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">Nenhuma squad encontrada.</td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/40">
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "nome", setSortSquad)}>
+                                                    Nome da Squad<SortIcon col="nome" sort={sortSquad} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "torre", setSortSquad)}>
+                                                    Torre<SortIcon col="torre" sort={sortSquad} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "contrato", setSortSquad)}>
+                                                    Contrato<SortIcon col="contrato" sort={sortSquad} />
+                                                </button>
+                                            </th>
+                                            <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">
+                                                <button className="flex items-center hover:text-foreground transition-colors" onClick={() => toggleSort(sortSquad, "membros", setSortSquad)}>
+                                                    Membros<SortIcon col="membros" sort={sortSquad} />
+                                                </button>
+                                            </th>
+                                            <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ações</th>
                                         </tr>
-                                    ) : (
-                                        paginatedSquads.map((s) => (
-                                            <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                                <td className="px-4 py-3 font-medium text-foreground">{s.nome}</td>
-                                                <td className="px-4 py-3 text-muted-foreground">{torres.find(t => t.id === s.torre_id)?.nome || "—"}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{(s as any).contratos?.nome || "—"}</td>
-                                                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{colaboradores.filter(c => (c.squad_ids ?? []).includes(s.id)).length}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailSquad(s)}>
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditSquadTarget(s); setSquadFormOpen(true); }}>
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteSquadTarget(s)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
+                                    </thead>
+                                    <tbody>
+                                        {loadingSquads ? (
+                                            [...Array(3)].map((_, i) => (
+                                                <tr key={i} className="border-b">
+                                                    <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                                                    <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-4 py-3 hidden lg:table-cell"><Skeleton className="h-4 w-12" /></td>
+                                                    <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                                                </tr>
+                                            ))
+                                        ) : paginatedSquads.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">Nenhuma squad encontrada.</td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            paginatedSquads.map((s) => (
+                                                <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                                    <td className="px-4 py-3 font-medium text-foreground">{s.nome}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground">{torres.find(t => t.id === s.torre_id)?.nome || "—"}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{(s as any).contratos?.nome || "—"}</td>
+                                                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{colaboradores.filter(c => (c.squad_ids ?? []).includes(s.id)).length}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setDetailSquad(s)}>
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => { setEditSquadTarget(s); setSquadFormOpen(true); }}>
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteSquadTarget(s)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
                     </div>
                 </TabsContent>
             </Tabs>

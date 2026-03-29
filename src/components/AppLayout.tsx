@@ -37,6 +37,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     <nav className="flex flex-col gap-1 mt-4">
       {navItems.map(({ icon: Icon, label, to }) => {
         const active = location.pathname === to;
+        const isCollapsed = !sidebarOpen && !mobileOpen;
+        
         return (
           <Link
             key={to}
@@ -46,11 +48,13 @@ export function AppLayout({ children }: AppLayoutProps) {
               "sidebar-nav-item mb-1",
               active
                 ? "bg-[var(--primary-800)]/80 text-white shadow-sm"
-                : "text-white/60 hover:bg-[var(--primary-800)]/40 hover:text-white"
+                : "text-white/60 hover:bg-[var(--primary-800)]/40 hover:text-white",
+              isCollapsed && "justify-center px-0"
             )}
+            title={isCollapsed ? label : undefined}
           >
-            <Icon size={18} className={cn(active && "text-[var(--primary-600)]")} />
-            {(sidebarOpen || mobileOpen) && <span className="font-medium tracking-wide">{label}</span>}
+            <Icon size={18} className={cn("shrink-0 transition-all duration-300", active && "text-[var(--primary-600)]")} />
+            {!isCollapsed && <span className="font-medium tracking-wide">{label}</span>}
           </Link>
         );
       })}

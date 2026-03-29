@@ -282,7 +282,7 @@ export default function Areas() {
         const toCreate = espNomes.filter((n) => !existingNames.includes(n));
 
         await Promise.all([
-            ...toDelete.map((e) => especialidadeService.remove(e.id).catch(() => {})),
+            ...toDelete.map((e) => especialidadeService.remove(e.id).catch(() => { })),
             ...toCreate.map((nome) => especialidadeService.create({ nome, area_id: areaId })),
         ]);
 
@@ -356,152 +356,152 @@ export default function Areas() {
         >
             {/* Main container */}
             <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
-            
-            {/* Actions bar */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-                <Button onClick={() => { setDirEditTarget(null); setDirFormOpen(true); }}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nova Diretoria
-                </Button>
-                <Button
-                    variant="soft"
-                    className="h-9 px-4 rounded-full gap-2"
-                    title="Ver Organograma Empresarial"
-                    onClick={() => navigate("/areas/orgchart")}
-                >
-                    <Network className="h-4 w-4" />
-                    Organograma Empresarial
-                </Button>
-            </div>
 
-            {/* Accordion list */}
-            <div className="space-y-3 mt-4">
-                {isLoading
-                    ? [...Array(3)].map((_, i) => (
-                        <div key={i} className="bg-card rounded-xl border shadow-sm p-4">
-                            <Skeleton className="h-5 w-48" />
-                        </div>
-                    ))
-                    : filteredDiretorias.length === 0 && unassignedAreas.length === 0
-                        ? (
-                            <div className="bg-card rounded-xl border shadow-sm px-4 py-12 text-center text-muted-foreground">
-                                Nenhuma diretoria encontrada. Clique em "Nova Diretoria" para começar.
+                {/* Actions bar */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Button onClick={() => { setDirEditTarget(null); setDirFormOpen(true); }}>
+                        <Plus className="h-4 w-4" />
+                        Nova diretoria
+                    </Button>
+                    <Button
+                        variant="soft"
+                        className="h-9 px-4 rounded-full gap-2"
+                        title="Ver Organograma Empresarial"
+                        onClick={() => navigate("/areas/orgchart")}
+                    >
+                        <Network className="h-4 w-4" />
+                        Organograma empresarial
+                    </Button>
+                </div>
+
+                {/* Accordion list */}
+                <div className="space-y-3 mt-4">
+                    {isLoading
+                        ? [...Array(3)].map((_, i) => (
+                            <div key={i} className="bg-card rounded-xl border shadow-sm p-4">
+                                <Skeleton className="h-5 w-48" />
                             </div>
-                        )
-                        : (
-                            <>
-                                {filteredDiretorias.map((dir) => {
-                                    const expanded = expandedDiretorias.has(dir.id);
-                                    const dirAreas = getAreasByDiretoria(dir.id);
-                                    const filteredAreas = dirAreas;
+                        ))
+                        : filteredDiretorias.length === 0 && unassignedAreas.length === 0
+                            ? (
+                                <div className="bg-card rounded-xl border shadow-sm px-4 py-12 text-center text-muted-foreground">
+                                    Nenhuma diretoria encontrada. Clique em "Nova Diretoria" para começar.
+                                </div>
+                            )
+                            : (
+                                <>
+                                    {filteredDiretorias.map((dir) => {
+                                        const expanded = expandedDiretorias.has(dir.id);
+                                        const dirAreas = getAreasByDiretoria(dir.id);
+                                        const filteredAreas = dirAreas;
 
-                                    return (
-                                        <div key={dir.id} className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                            {/* Diretoria header */}
-                                            <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
-                                                <button
-                                                    className="flex items-center gap-2 flex-1 text-left"
-                                                    onClick={() => toggleDiretoria(dir.id)}
-                                                >
-                                                    {expanded
-                                                        ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                                                        : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                                                    <span className="font-semibold text-foreground">{dir.nome}</span>
-                                                    {dir.lideres && dir.lideres.length > 0 && (
-                                                        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                                                            <UserRound className="h-3 w-3 shrink-0" />
-                                                            {getLideresNames(dir.lideres)}
+                                        return (
+                                            <div key={dir.id} className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                                {/* Diretoria header */}
+                                                <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+                                                    <button
+                                                        className="flex items-center gap-2 flex-1 text-left"
+                                                        onClick={() => toggleDiretoria(dir.id)}
+                                                    >
+                                                        {expanded
+                                                            ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                            : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                                                        <span className="font-semibold text-foreground">{dir.nome}</span>
+                                                        {dir.lideres && dir.lideres.length > 0 && (
+                                                            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                                                                <UserRound className="h-3 w-3 shrink-0" />
+                                                                {getLideresNames(dir.lideres)}
+                                                            </span>
+                                                        )}
+                                                        {dir.descricao && (
+                                                            <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-xs">
+                                                                — {dir.descricao}
+                                                            </span>
+                                                        )}
+                                                        <span className="ml-2 text-xs text-muted-foreground shrink-0">
+                                                            {dirAreas.length} área{dirAreas.length !== 1 ? "s" : ""}
                                                         </span>
-                                                    )}
-                                                    {dir.descricao && (
-                                                        <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-xs">
-                                                            — {dir.descricao}
-                                                        </span>
-                                                    )}
-                                                    <span className="ml-2 text-xs text-muted-foreground shrink-0">
-                                                        {dirAreas.length} área{dirAreas.length !== 1 ? "s" : ""}
-                                                    </span>
-                                                </button>
-                                                <div className="flex items-center gap-0.5 shrink-0">
-                                                    <Button
-                                                        variant="ghost" size="icon"
-                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                        title="Ver colaboradores"
-                                                        onClick={() => navigate(`/areas/diretorias/${dir.id}`)}
-                                                    >
-                                                        <BarChart2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost" size="sm"
-                                                        className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
-                                                        onClick={() => {
-                                                            openAddArea(dir.id);
-                                                            setExpandedDiretorias((prev) => new Set([...prev, dir.id]));
-                                                        }}
-                                                    >
-                                                        <Plus className="h-3 w-3" /> Área
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost" size="icon"
-                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                        onClick={() => { setDirEditTarget(dir); setDirFormOpen(true); }}
-                                                    >
-                                                        <Edit2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost" size="icon"
-                                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => setDirDeleteTarget(dir)}
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
+                                                    </button>
+                                                    <div className="flex items-center gap-0.5 shrink-0">
+                                                        <Button
+                                                            variant="ghost" size="icon"
+                                                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                            title="Ver colaboradores"
+                                                            onClick={() => navigate(`/areas/diretorias/${dir.id}`)}
+                                                        >
+                                                            <BarChart2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost" size="sm"
+                                                            className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
+                                                            onClick={() => {
+                                                                openAddArea(dir.id);
+                                                                setExpandedDiretorias((prev) => new Set([...prev, dir.id]));
+                                                            }}
+                                                        >
+                                                            <Plus className="h-3 w-3" /> Área
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost" size="icon"
+                                                            className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                            onClick={() => { setDirEditTarget(dir); setDirFormOpen(true); }}
+                                                        >
+                                                            <Edit2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost" size="icon"
+                                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                            onClick={() => setDirDeleteTarget(dir)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Areas list */}
-                                            {expanded && (
+                                                {/* Areas list */}
+                                                {expanded && (
+                                                    <div className="border-t">
+                                                        {filteredAreas.length === 0 ? (
+                                                            <p className="px-8 py-4 text-sm text-muted-foreground">
+                                                                Nenhuma área nesta diretoria.
+                                                            </p>
+                                                        ) : (
+                                                            filteredAreas.map((area) => (
+                                                                <AreaRow key={area.id} area={area} />
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Unassigned areas */}
+                                    {unassignedAreas.length > 0 && (
+                                        <div className="bg-card rounded-xl border border-dashed shadow-sm overflow-hidden">
+                                            <div
+                                                className="flex items-center gap-2 px-4 py-3 bg-muted/10 cursor-pointer"
+                                                onClick={() => toggleDiretoria("__unassigned__")}
+                                            >
+                                                {expandedDiretorias.has("__unassigned__")
+                                                    ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                                    : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                                <span className="font-medium text-muted-foreground text-sm">
+                                                    Sem diretoria ({unassignedAreas.length})
+                                                </span>
+                                            </div>
+                                            {expandedDiretorias.has("__unassigned__") && (
                                                 <div className="border-t">
-                                                    {filteredAreas.length === 0 ? (
-                                                        <p className="px-8 py-4 text-sm text-muted-foreground">
-                                                            Nenhuma área nesta diretoria.
-                                                        </p>
-                                                    ) : (
-                                                        filteredAreas.map((area) => (
-                                                            <AreaRow key={area.id} area={area} />
-                                                        ))
-                                                    )}
+                                                    {unassignedAreas.map((area) => (
+                                                        <AreaRow key={area.id} area={area} />
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
-                                    );
-                                })}
-
-                                {/* Unassigned areas */}
-                                {unassignedAreas.length > 0 && (
-                                    <div className="bg-card rounded-xl border border-dashed shadow-sm overflow-hidden">
-                                        <div
-                                            className="flex items-center gap-2 px-4 py-3 bg-muted/10 cursor-pointer"
-                                            onClick={() => toggleDiretoria("__unassigned__")}
-                                        >
-                                            {expandedDiretorias.has("__unassigned__")
-                                                ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                                            <span className="font-medium text-muted-foreground text-sm">
-                                                Sem diretoria ({unassignedAreas.length})
-                                            </span>
-                                        </div>
-                                        {expandedDiretorias.has("__unassigned__") && (
-                                            <div className="border-t">
-                                                {unassignedAreas.map((area) => (
-                                                    <AreaRow key={area.id} area={area} />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        )}
-            </div>
+                                    )}
+                                </>
+                            )}
+                </div>
             </div>
 
             {/* Diretoria form */}
