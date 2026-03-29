@@ -3,11 +3,12 @@ import type { CampoRastreavel, EventoAlteracao } from "@/types/historico";
 import { CAMPOS_RASTREAVEIS } from "@/types/historico";
 import { supabase } from "@/lib/supabase";
 
-const CAMPOS_ARRAY: readonly CampoRastreavel[] = ["torre_ids", "squad_ids"] as const;
+const CAMPOS_ARRAY: readonly CampoRastreavel[] = ["torre_ids", "squad_ids", "area_ids"] as const;
 
 export interface NomesEntidades {
   torres?: Record<string, string>;   // id → nome
   squads?: Record<string, string>;   // id → nome
+  areas?: Record<string, string>;    // id → nome
   diretorias?: Record<string, string>;
   businessUnits?: Record<string, string>;
 }
@@ -21,9 +22,11 @@ function serializarValor(
 
   if (CAMPOS_ARRAY.includes(campo)) {
     const ids = Array.isArray(valor) ? valor as string[] : [];
-    const mapa = campo === "torre_ids" ? nomes?.torres : nomes?.squads;
+    const mapa = campo === "torre_ids" ? nomes?.torres
+      : campo === "squad_ids" ? nomes?.squads
+      : campo === "area_ids" ? nomes?.areas
+      : undefined;
     if (mapa) {
-      // Salva [{id, nome}] para preservar o nome mesmo após deleção
       const enriquecido = ids.map((id) => ({ id, nome: mapa[id] ?? null }));
       return JSON.stringify(enriquecido);
     }

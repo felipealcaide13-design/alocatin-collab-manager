@@ -1,10 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Eye, ChevronRight } from "lucide-react";
+import {
+  Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, ChevronRight,
+  Users, Percent, Sparkle, ShieldCheck, CalendarClock, UserMinus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
+import { KpiCard } from "@/components/ui/kpi-card";
 import {
   Select,
   SelectContent,
@@ -18,11 +22,15 @@ import { colaboradorService } from "@/services/colaboradorService";
 import { areaService } from "@/services/areaService";
 import { especialidadeService } from "@/services/especialidadeService";
 import { diretoriaService } from "@/services/diretoriaService";
+import { torreService } from "@/services/torreService";
+import { supabase } from "@/lib/supabase";
 import { type Colaborador } from "@/types/colaborador";
 import { useToast } from "@/hooks/use-toast";
 
 type SortField = "nomeCompleto" | "diretoria" | "area" | "status" | "senioridade";
 type SortDir = "asc" | "desc";
+
+const SENIORIDADES_LIDER = ["Coordenador(a)", "Gerente", "Head", "Diretor(a)", "C-level"];
 
 export default function Colaboradores() {
   const navigate = useNavigate();
@@ -72,6 +80,78 @@ export default function Colaboradores() {
     queryKey: ["diretorias"],
     queryFn: () => diretoriaService.getAll().catch(() => []),
   });
+
+  const { data: squads = [] } = useQuery({
+    queryKey: ["squads"],
+    queryFn: () => torreService.getAllSquads().catch(() => []),
+  });
+
+  // Deleted in last 12 months (from historico_alteracoes)
+  const { data: deletedLast12 = 0 } = useQuery({
+    queryKey: ["kpi-deleted-12m"],
+    queryFn: async () => {
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - 12);
+      const { count, error } = await supabase
+        .from("historico_alteracoes")
+        .select("id", { count: "exact", head: true })
+        .eq("campo", "deletado")
+        .gte("alterado_em", cutoff.toISOString());
+      if (error) return 0;
+      return count ?? 0;
+    },
+  });
+
+  // ── KPI calculations ──────────────────────────────────────
+  const kpis = useMemo(() => {
+    const ativos = colaboradores.filter((c) => c.status === "Ativo");
+    const totalAtivos = ativos.length;
+
+    // % allocated in BU structures (has at least one squad_id)
+    const alocados = ativos.filter((c) => (c.squad_ids ?? []).length > 0).length;
+    const pctAlocados = totalAtivos > 0 ? Math.round((alocados / totalAtivos) * 100) : 0;
+
+    // % unique specialties used
+    const allEspIds = new Set(especialidades.map((e) => e.id));
+    const usedEspIds = new Set(
+      colaboradores
+        .filter((c) => c.especialidade_id)
+        .map((c) => c.especialidade_id!)
+    );
+    const pctEspecialidades = allEspIds.size > 0
+      ? Math.round((usedEspIds.size / allEspIds.size) * 100)
+      : 0;
+
+    // Unique direct leaders
+    const lideresUnicos = ativos.filter((c) =>
+      SENIORIDADES_LIDER.includes(c.senioridade)
+    ).length;
+
+    // Average tenure
+    const now = new Date();
+    let mediaDuracaoStr = "0a 0m";
+    if (ativos.length > 0) {
+      let totalMonths = 0;
+      let validCount = 0;
+      for (const c of ativos) {
+        if (!c.dataAdmissao) continue;
+        const admissao = new Date(c.dataAdmissao + "T00:00:00");
+        const diffMs = now.getTime() - admissao.getTime();
+        if (diffMs < 0) continue;
+        const months = Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.44));
+        totalMonths += months;
+        validCount++;
+      }
+      if (validCount > 0) {
+        const avgMonths = Math.round(totalMonths / validCount);
+        const years = Math.floor(avgMonths / 12);
+        const remainMonths = avgMonths % 12;
+        mediaDuracaoStr = `${years}a ${remainMonths}m`;
+      }
+    }
+
+    return { totalAtivos, pctAlocados, pctEspecialidades, lideresUnicos, mediaDuracaoStr, deletedLast12 };
+  }, [colaboradores, especialidades, deletedLast12]);
 
   const createMutation = useMutation({
     mutationFn: (data: Omit<Colaborador, "id">) => colaboradorService.create(data),
@@ -144,8 +224,17 @@ export default function Colaboradores() {
   return (
     <PageLayout
       title="Colaboradores"
-      subtitle={isLoading ? "Carregando..." : `${filtered.length} colaborador(es) encontrado(s)`}
     >
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 w-full">
+        <KpiCard icon={Users} label="Colaboradores ativos" value={kpis.totalAtivos} />
+        <KpiCard icon={Percent} label="Alocados em estruturas" value={`${kpis.pctAlocados}%`} />
+        <KpiCard icon={Sparkle} label="Especialidades em uso" value={`${kpis.pctEspecialidades}%`} />
+        <KpiCard icon={ShieldCheck} label="Líderes diretos únicos" value={kpis.lideresUnicos} />
+        <KpiCard icon={CalendarClock} label="Média de duração" value={kpis.mediaDuracaoStr} />
+        <KpiCard icon={UserMinus} label="Deletados (12 meses)" value={kpis.deletedLast12} />
+      </div>
+
       {/* Main container */}
       <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
         {/* Filters and New Button Row */}

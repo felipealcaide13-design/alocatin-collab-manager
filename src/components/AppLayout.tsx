@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", to: "/" },
+  { icon: LayoutDashboard, label: "Visão geral", to: "/" },
   { icon: Building2, label: "Business Units", to: "/business-units" },
   { icon: FileText, label: "Contratos", to: "/contratos" },
   { icon: Users, label: "Colaboradores", to: "/colaboradores" },

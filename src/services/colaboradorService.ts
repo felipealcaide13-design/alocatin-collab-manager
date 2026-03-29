@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { Colaborador, ColaboradorInput } from "@/types/colaborador";
 import { supabase } from "@/lib/supabase";
 import { diffCamposRastreaveis, historicoService } from "@/services/historicoService";
+import type { CampoRastreavel, EventoAlteracao } from "@/types/historico";
 
 function fromDb(row: any): Colaborador {
   return {
@@ -40,6 +41,55 @@ function toDb(input: Partial<ColaboradorInput>): Record<string, any> {
   return mapped;
 }
 
+/**
+ * Gera os eventos de snapshot inicial com todos os campos rastreáveis do colaborador recém-criado.
+ * Isso permite que a reconstrução temporal saiba exatamente o estado do colaborador na criação.
+ */
+function buildSnapshotCriacao(colaborador: Colaborador): Omit<EventoAlteracao, "id" | "alterado_em">[] {
+  const eventos: Omit<EventoAlteracao, "id" | "alterado_em">[] = [];
+
+  // Evento de cadastro (lifecycle)
+  eventos.push({
+    colaborador_id: colaborador.id,
+    campo: "cadastro",
+    valor_anterior: null,
+    novo_valor: new Date().toISOString(),
+    autor_alteracao: "sistema",
+  });
+
+  // Snapshot de cada campo rastreável com seu valor inicial
+  const camposParaSnapshot: { campo: CampoRastreavel; valor: unknown }[] = [
+    { campo: "senioridade", valor: colaborador.senioridade },
+    { campo: "diretoria_id", valor: colaborador.diretoria_id },
+    { campo: "status", valor: colaborador.status },
+    { campo: "bu_id", valor: colaborador.bu_id },
+    { campo: "torre_ids", valor: colaborador.torre_ids },
+    { campo: "squad_ids", valor: colaborador.squad_ids },
+    { campo: "lider_id", valor: colaborador.lider_id },
+    { campo: "area_ids", valor: colaborador.area_ids },
+    { campo: "dataAdmissao", valor: colaborador.dataAdmissao },
+  ];
+
+  for (const { campo, valor } of camposParaSnapshot) {
+    const serializado = valor === null || valor === undefined
+      ? null
+      : Array.isArray(valor) ? JSON.stringify(valor) : String(valor);
+
+    // Só registra se tem valor (evita poluir com campos null)
+    if (serializado !== null) {
+      eventos.push({
+        colaborador_id: colaborador.id,
+        campo,
+        valor_anterior: null,
+        novo_valor: serializado,
+        autor_alteracao: "sistema",
+      });
+    }
+  }
+
+  return eventos;
+}
+
 export const colaboradorService = {
   async getAll(): Promise<Colaborador[]> {
     const { data, error } = await supabase
@@ -73,14 +123,9 @@ export const colaboradorService = {
     if (error) throw new Error(error.message);
     const colaborador = fromDb(data);
 
-    // Registra evento de cadastro no histórico
-    await historicoService.registrar([{
-      colaborador_id: colaborador.id,
-      campo: "cadastro",
-      valor_anterior: null,
-      novo_valor: colaborador.nomeCompleto,
-      autor_alteracao: "sistema",
-    }]);
+    // Registra snapshot completo de criação (cadastro + todos os campos iniciais)
+    const eventosCriacao = buildSnapshotCriacao(colaborador);
+    await historicoService.registrar(eventosCriacao);
 
     return colaborador;
   },
@@ -91,11 +136,12 @@ export const colaboradorService = {
 
     // Buscar nomes das entidades para enriquecer o histórico
     const precisaNomes =
-      "torre_ids" in input || "squad_ids" in input || "bu_id" in input || "diretoria_id" in input;
+      "torre_ids" in input || "squad_ids" in input || "bu_id" in input
+      || "diretoria_id" in input || "area_ids" in input;
 
     let nomes: import("@/services/historicoService").NomesEntidades | undefined;
     if (precisaNomes) {
-      const [torresData, squadsData, busData, diretoriasData] = await Promise.all([
+      const [torresData, squadsData, busData, diretoriasData, areasData] = await Promise.all([
         "torre_ids" in input || "squad_ids" in input
           ? supabase.from("torres").select("id, nome").then(({ data }) => data ?? [])
           : Promise.resolve([]),
@@ -108,6 +154,9 @@ export const colaboradorService = {
         "diretoria_id" in input
           ? supabase.from("diretorias").select("id, nome").then(({ data }) => data ?? [])
           : Promise.resolve([]),
+        "area_ids" in input
+          ? supabase.from("areas").select("id, nome").then(({ data }) => data ?? [])
+          : Promise.resolve([]),
       ]);
 
       nomes = {
@@ -115,6 +164,7 @@ export const colaboradorService = {
         squads: Object.fromEntries(squadsData.map((s: any) => [s.id, s.nome])),
         businessUnits: Object.fromEntries(busData.map((b: any) => [b.id, b.nome])),
         diretorias: Object.fromEntries(diretoriasData.map((d: any) => [d.id, d.nome])),
+        areas: Object.fromEntries(areasData.map((a: any) => [a.id, a.nome])),
       };
     }
 
@@ -134,6 +184,29 @@ export const colaboradorService = {
   },
 
   async remove(id: string): Promise<void> {
+    // Salvar snapshot completo ANTES de deletar para reconstrução temporal
+    const colaborador = await colaboradorService.getById(id);
+    if (colaborador) {
+      await historicoService.registrar([{
+        colaborador_id: colaborador.id,
+        campo: "deletado",
+        valor_anterior: JSON.stringify({
+          nomeCompleto: colaborador.nomeCompleto,
+          senioridade: colaborador.senioridade,
+          status: colaborador.status,
+          diretoria_id: colaborador.diretoria_id,
+          bu_id: colaborador.bu_id,
+          torre_ids: colaborador.torre_ids,
+          squad_ids: colaborador.squad_ids,
+          area_ids: colaborador.area_ids,
+          lider_id: colaborador.lider_id,
+          dataAdmissao: colaborador.dataAdmissao,
+        }),
+        novo_valor: new Date().toISOString(),
+        autor_alteracao: "sistema",
+      }]);
+    }
+
     // Remove o colaborador de squads.membros (array sem FK, não tem CASCADE automático)
     const { data: squadsComMembro } = await supabase
       .from("squads")
@@ -151,9 +224,9 @@ export const colaboradorService = {
       );
     }
 
-    // historico_alteracoes tem ON DELETE CASCADE — deletado automaticamente
-    // lider_id em colaboradores tem ON DELETE SET NULL — limpo automaticamente
-    // squads.lider tem ON DELETE SET NULL — limpo automaticamente
+    // historico_alteracoes agora tem ON DELETE SET NULL (colaborador_id → null)
+    // lider_id em colaboradores tem ON DELETE SET NULL
+    // squads.lider tem ON DELETE SET NULL
     const { error } = await supabase.from("colaboradores").delete().eq("id", id);
     if (error) throw new Error(error.message);
   },

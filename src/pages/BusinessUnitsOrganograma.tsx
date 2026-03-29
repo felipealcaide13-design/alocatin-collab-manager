@@ -1,24 +1,45 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { PageLayout } from "@/components/ui/page-layout";
 import { BUOrgChart } from "@/components/business-units/BUOrgChart";
+import { getOrgChartAtDate } from "@/services/orgchartTimeTravelService";
 
-import { businessUnitService } from "@/services/businessUnitService";
-import { torreService } from "@/services/torreService";
-import { colaboradorService } from "@/services/colaboradorService";
+function todayStr(): string {
+  return new Date().toISOString().split("T")[0];
+}
 
 export default function BusinessUnitsOrganograma() {
   const navigate = useNavigate();
   const [chartLayout, setChartLayout] = useState<"top" | "left" | "right" | "bottom">("top");
+  const [selectedDate, setSelectedDate] = useState(todayStr());
 
-  const { data: businessUnits = [], isLoading: loadingBUs } = useQuery({ queryKey: ["business_units"], queryFn: () => businessUnitService.getAll().catch(() => []) });
-  const { data: torres = [], isLoading: loadingTorres } = useQuery({ queryKey: ["torres"], queryFn: () => torreService.getAllTorres().catch(() => []) });
-  const { data: squads = [], isLoading: loadingSquads } = useQuery({ queryKey: ["squads"], queryFn: () => torreService.getAllSquads().catch(() => []) });
-  const { data: colaboradores = [] } = useQuery({ queryKey: ["colaboradores"], queryFn: () => colaboradorService.getAll().catch(() => []) });
+  const today = todayStr();
+  const isHistorico = selectedDate !== today;
+
+  const { data: snapshot, isLoading } = useQuery({
+    queryKey: ["orgchart_snapshot", selectedDate],
+    queryFn: () => getOrgChartAtDate(selectedDate),
+    staleTime: isHistorico ? Infinity : 30_000,
+  });
+
+  const handleDateChange = useCallback((date: string) => {
+    if (date && date <= todayStr()) {
+      setSelectedDate(date);
+    }
+  }, []);
+
+  const resetToToday = useCallback(() => {
+    setSelectedDate(todayStr());
+  }, []);
+
+  const formatDateBR = (dateStr: string): string => {
+    const [y, m, d] = dateStr.split("-");
+    return `${d}/${m}/${y}`;
+  };
 
   return (
     <PageLayout
@@ -30,15 +51,40 @@ export default function BusinessUnitsOrganograma() {
         </Button>
       }
     >
+      {/* Banner de modo histórico */}
+      {isHistorico && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 mb-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Visualizando organograma de {formatDateBR(selectedDate)}</strong>
+              <span className="text-amber-700 ml-1.5">
+                — Os dados exibidos refletem o estado no final do dia.
+              </span>
+            </span>
+          </div>
+          <button
+            onClick={resetToToday}
+            className="p-1 rounded-full hover:bg-amber-200 transition-colors shrink-0"
+            title="Voltar para hoje"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border w-full h-[calc(100vh-13.5rem)]">
         <BUOrgChart
-          businessUnits={businessUnits}
-          torres={torres}
-          squads={squads}
-          colaboradores={colaboradores}
-          isLoading={loadingBUs || loadingTorres || loadingSquads}
+          businessUnits={snapshot?.businessUnits ?? []}
+          torres={snapshot?.torres ?? []}
+          squads={snapshot?.squads ?? []}
+          colaboradores={snapshot?.colaboradores ?? []}
+          isLoading={isLoading}
           layout={chartLayout}
           onLayoutChange={setChartLayout}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          maxDate={today}
         />
       </div>
     </PageLayout>

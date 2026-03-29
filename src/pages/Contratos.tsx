@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, Download, Eye, ChevronRight } from "lucide-react";
+import {
+    Plus, Search, ChevronUp, ChevronDown, ChevronsUpDown, Download, ChevronRight,
+    FileCheck, DollarSign, UsersRound, BarChart2, Unlink, Building, Banknote
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLayout, FilterBar } from "@/components/ui/page-layout";
+import { KpiCard } from "@/components/ui/kpi-card";
 import {
     Select,
     SelectContent,
@@ -24,6 +28,19 @@ import { type Contrato, CONTRATO_STATUS } from "@/types/contrato";
 
 type SortField = "nome" | "cliente" | "status" | "contract_type" | "valor" | "data_fim";
 type SortDir = "asc" | "desc";
+
+/** Calculate months between two date strings (YYYY-MM-DD) */
+function monthsBetween(startStr: string, endStr: string | null): number {
+    if (!endStr) return 1;
+    const s = new Date(startStr + "T00:00:00");
+    const e = new Date(endStr + "T00:00:00");
+    const months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+    return Math.max(months, 1);
+}
+
+function formatBRL(val: number): string {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val);
+}
 
 export default function Contratos() {
     const { toast } = useToast();
@@ -70,6 +87,44 @@ export default function Contratos() {
             setSearchParams({}, { replace: true });
         }
     }, []);
+
+    // ── KPI calculations ──────────────────────────────────────
+    const kpis = useMemo(() => {
+        const ativos = contratos.filter((c) => c.status === "Ativo");
+        const totalAtivos = ativos.length;
+
+        // Receita mensal total ativa
+        let receitaMensal = 0;
+        for (const c of ativos) {
+            const val = c.valor ?? 0;
+            if (c.contract_type === "Aberto") {
+                receitaMensal += val;
+            } else {
+                // Fechado: valor total / meses de vigência
+                const meses = monthsBetween(c.data_inicio, c.data_fim);
+                receitaMensal += val / meses;
+            }
+        }
+
+        // Clientes únicos (all contracts)
+        const clientesUnicos = new Set(contratos.map((c) => c.cliente)).size;
+
+        // Valor médio por contrato ativo
+        const valorMedio = totalAtivos > 0
+            ? ativos.reduce((sum, c) => sum + (c.valor ?? 0), 0) / totalAtivos
+            : 0;
+
+        // Contratos sem BU/Torre
+        const semTorre = ativos.filter((c) => !c.torres || c.torres.length === 0).length;
+
+        return {
+            totalAtivos,
+            receitaMensal: formatBRL(Math.round(receitaMensal)),
+            clientesUnicos,
+            valorMedio: formatBRL(Math.round(valorMedio)),
+            semTorre,
+        };
+    }, [contratos]);
 
     const createMutation = useMutation({
         mutationFn: (data: Omit<Contrato, "id" | "created_at">) => contratoService.create(data),
@@ -226,7 +281,6 @@ export default function Contratos() {
     return (
         <PageLayout
             title="Projetos Contratuais"
-            subtitle={isLoading ? "Carregando..." : `${filtered.length} contrato(s) encontrado(s)`}
             action={
                 <Button variant="outline" className="rounded-full bg-[#E1ECF0] text-[#08526E] border-none hover:bg-[#d0e0e6] font-medium" onClick={handleExportCSV}>
                     <Download className="h-4 w-4" />
@@ -234,6 +288,15 @@ export default function Contratos() {
                 </Button>
             }
         >
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+                <KpiCard icon={FileCheck} label="Contratos ativos" value={kpis.totalAtivos} />
+                <KpiCard icon={DollarSign} label="Receita mensal ativa" value={kpis.receitaMensal} />
+                <KpiCard icon={Building} label="Clientes únicos" value={kpis.clientesUnicos} />
+                <KpiCard icon={Banknote} label="Valor médio por contrato aberto" value={kpis.valorMedio} />
+                <KpiCard icon={Unlink} label="Contratos sem BU/Torre" value={kpis.semTorre} />
+            </div>
+
             {/* Main container */}
             <div className="bg-white rounded-[24px] p-4 sm:p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
                 {/* Filters and New Button Row */}

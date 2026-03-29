@@ -1,11 +1,15 @@
 export type CampoRastreavel =
   | "cadastro"
+  | "deletado"
   | "senioridade"
   | "diretoria_id"
   | "status"
   | "bu_id"
   | "torre_ids"
-  | "squad_ids";
+  | "squad_ids"
+  | "lider_id"
+  | "area_ids"
+  | "dataAdmissao";
 
 export const CAMPOS_RASTREAVEIS: readonly CampoRastreavel[] = [
   "senioridade",
@@ -14,21 +18,28 @@ export const CAMPOS_RASTREAVEIS: readonly CampoRastreavel[] = [
   "bu_id",
   "torre_ids",
   "squad_ids",
+  "lider_id",
+  "area_ids",
+  "dataAdmissao",
 ] as const;
 
 export const ROTULOS_CAMPOS: Record<CampoRastreavel, string> = {
   cadastro:     "Cadastro",
+  deletado:     "Deleção",
   senioridade:  "Senioridade",
   diretoria_id: "Diretoria",
   status:       "Status",
   bu_id:        "Business Unit",
   torre_ids:    "Torres",
   squad_ids:    "Squads",
+  lider_id:     "Líder Direto",
+  area_ids:     "Áreas",
+  dataAdmissao: "Data de Admissão",
 };
 
 export interface EventoAlteracao {
   id: string;
-  colaborador_id: string;
+  colaborador_id: string | null;
   campo: CampoRastreavel;
   valor_anterior: string | null;
   novo_valor: string | null;

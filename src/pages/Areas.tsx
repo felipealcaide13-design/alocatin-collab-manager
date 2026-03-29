@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, Edit2, Trash2, ChevronDown, ChevronRight, BookOpen, BarChart2, Network, UserRound, Check, X,
+    Layers, LayoutGrid, Sparkle, XLineTop,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/ui/page-layout";
+import { KpiCard } from "@/components/ui/kpi-card";
 import {
     Dialog,
     DialogContent,
@@ -142,6 +144,20 @@ export default function Areas() {
             next.has(id) ? next.delete(id) : next.add(id);
             return next;
         });
+
+    // ── KPI calculations (reactive) ──────────────────────────────
+    const kpis = useMemo(() => {
+        const totalDiretorias = diretorias.length;
+        const totalAreas = areas.length;
+        const totalEspecialidades = especialidades.length;
+        const mediaAreasPorDiretoria = totalDiretorias > 0
+            ? (totalAreas / totalDiretorias).toFixed(1)
+            : "0";
+        const mediaEspecialidadesPorArea = totalAreas > 0
+            ? (totalEspecialidades / totalAreas).toFixed(1)
+            : "0";
+        return { totalDiretorias, totalAreas, totalEspecialidades, mediaAreasPorDiretoria, mediaEspecialidadesPorArea };
+    }, [diretorias, areas, especialidades]);
 
     // ── Filtered diretorias ───────────────────────────────────
     const filteredDiretorias = diretorias;
@@ -352,8 +368,16 @@ export default function Areas() {
     return (
         <PageLayout
             title="Diretorias"
-            subtitle={isLoading ? "Carregando..." : `${diretorias.length} diretoria(s) · ${areas.length} área(s)`}
         >
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+                <KpiCard icon={Layers} label="Diretorias ativas" value={kpis.totalDiretorias} />
+                <KpiCard icon={LayoutGrid} label="Total de áreas" value={kpis.totalAreas} />
+                <KpiCard icon={Sparkle} label="Total de especialidades" value={kpis.totalEspecialidades} />
+                <KpiCard icon={XLineTop} label="Áreas por diretoria" value={kpis.mediaAreasPorDiretoria} />
+                <KpiCard icon={XLineTop} label="Especialidades por área" value={kpis.mediaEspecialidadesPorArea} />
+            </div>
+
             {/* Main container */}
             <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] border border-[#e0e0e0] space-y-6 w-full">
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import { OrgChart } from "d3-org-chart";
-import { ZoomIn, ZoomOut, Maximize2, AlignCenter, Network } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, AlignCenter, Network, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type BusinessUnit } from "@/types/businessUnit";
@@ -268,9 +268,12 @@ interface Props {
   isLoading: boolean;
   layout: Layout;
   onLayoutChange: (l: Layout) => void;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
+  maxDate?: string;
 }
 
-export function BUOrgChart({ businessUnits, torres, squads, colaboradores, isLoading, layout, onLayoutChange }: Props) {
+export function BUOrgChart({ businessUnits, torres, squads, colaboradores, isLoading, layout, onLayoutChange, selectedDate, onDateChange, maxDate }: Props) {
   const chartRef = useRef<OrgChart<ChartNode> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -375,6 +378,23 @@ export function BUOrgChart({ businessUnits, torres, squads, colaboradores, isLoa
         >
           <AlignCenter className="h-4 w-4" /> Recolher
         </Button>
+
+        {/* Date picker — pushed to the right */}
+        {selectedDate && onDateChange && (
+          <div className="flex items-center ml-auto bg-card border rounded-lg px-2.5 py-1 shadow-sm">
+            <input
+              type="date"
+              value={selectedDate}
+              max={maxDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && (!maxDate || val <= maxDate)) onDateChange(val);
+              }}
+              className="text-sm border-none outline-none bg-transparent cursor-pointer"
+              style={{ colorScheme: "light" }}
+            />
+          </div>
+        )}
       </div>
 
       <div ref={wrapperRef} className="flex-1 min-h-0 bg-card border rounded-xl shadow-sm overflow-hidden relative">
