@@ -80,9 +80,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
           {sidebarOpen && (
-            <span className="font-extrabold text-xl tracking-tighter">
-              <span className="text-[var(--primary-600)]">Aloca</span><span className="text-white">tin</span>
-            </span>
+            <img 
+              src="/logonegativo.png" 
+              alt="Alocatin" 
+              className="w-[112px] h-auto object-contain transition-all duration-300" 
+            />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -109,9 +111,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--primary-800)]">
-          <span className="font-extrabold text-xl tracking-tighter">
-            <span className="text-[var(--primary-600)]">Aloca</span><span className="text-white">tin</span>
-          </span>
+          <img 
+            src="/logonegativo.png" 
+            alt="Alocatin" 
+            className="w-[112px] h-auto object-contain" 
+          />
           <button onClick={() => setMobileOpen(false)} className="text-white/70 hover:text-white hover:bg-[var(--primary-800)]/60 p-1 rounded-md transition-colors">
             <X size={18} />
           </button>
